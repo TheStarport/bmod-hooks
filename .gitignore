@@ -429,3 +429,6 @@ FodyWeavers.xsd
 # Misc
 *.bak
 *.lnk
+
+#Temporary Folders
+enc_temp_folder/*
