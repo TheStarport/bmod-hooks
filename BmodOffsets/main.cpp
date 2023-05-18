@@ -63,6 +63,12 @@ void FreelancerHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(nullptr));
 
+	//Filter out incompatible builds on server by default. (THIS ISN'T PATCHING?)
+	PatchM(0x1628F4, 0x50);
+
+	//Prevent IPv6 addresses from appearing in the server list.
+	PatchM(0x1ACF6A, 0x40, 0x74, 0x63, 0x48, 0x51, 0x8D, 0x54, 0xE4, 0x20, 0x52, 0x83, 0xE9, 0x08);
+
 	//Unlock visual cap on cruise speed.
 	PatchM(0x0D5936, 0x90, 0xE9);
 
@@ -120,6 +126,17 @@ void FreelancerHacks()
 	PatchV(0x16DDEC, 459033);
 	PatchV(0x174890, 459033);
 
+	//Distance out to which the 'tractor all' button functions.
+	PatchV(0x1D848C, std::powf(1500.0f, 2.0f));
+
+	//Remove cruise speed display limit
+	PatchM(0x0D5936, 0x90, 0xE9);
+
+	//Bypass ESRB notice.
+	PatchM(0x166C2B, 0xEB);
+
+	//Supress "Failed to get start location" messages in FLSpew.txt
+	PatchM(0x03B348, 0xEB);
 }
 
 void ServerHacks()
@@ -131,6 +148,11 @@ void ServerHacks()
 
 	//Energy weapons don't damage power.
 	PatchM(0x00AFC0, 0xC2, 0x08, 0x00);
+
+	//Disable encryption of file on creating MP character, saving, or creating the restart.fl file.
+	//PatchM(0x06BFA6, 0x14, 0xB3);
+	//PatchM(0x06E10D, 0x14, 0xB3);
+	//PatchM(0x07399D, 0x14, 0xB3);
 
 	//Patch for restart.fl.
 	restartProcessSave = PVOID(DWORD(restartProcessSave) + mod);
@@ -147,7 +169,10 @@ void CommonHacks()
 	//Disable Act_PlayerEnemyClamp.
 	PatchM(0x08E86A, 0xEB, 0x39);
 
-	//Enable NPC countermeasure usage.
+	//Adjusts CEGun::CanSeeTargetObject, allowing NPCs to 'see' everything.
+	PatchM(0x038590, 0xB0, 0x01, 0xC2, 0x04, 0x00)
+
+	//Enable NPC countermeasure and scanner usage.
 	PatchM(0x13E52C, 0x00);
 
 	//Enable mine droppers during cruise.
@@ -180,6 +205,14 @@ void CommonHacks()
 	//disable ArchDB::Get random mission spew warning.
 	PatchM(0x0995B6, 0x90, 0x90);
 	PatchM(0x0995FC, 0x90, 0x90);
+
+	//Use thruster hp_type for armour.
+	//PatchM(0x139AF0, 0xC0, 0xDE, 0x26);
+	//PatchM(0x139AFC, 0x10, 0xA7, 0x27);
+
+	//Repair price multiplier ratio
+	//PatchV(0x004A28, 0.33f);
+	//PatchV(0x0057FA, 0.33f);
 }
 
 //Run our hack process and check if the server or the client are running accordingly. Always run hacks for common.dll.
