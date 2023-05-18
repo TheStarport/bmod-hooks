@@ -20,7 +20,7 @@ bool EndsWith(std::wstring const& value, std::wstring const& ending)
 	Utils::Memory::WriteProcMem(mod + o, patch.data(), patch.size());\
 }
 
-//Define our macro to write arbitrary value into memory.
+//Define our macro to write arbitrary values into memory.
 #define PatchV(offset, val)\
 {\
 	const auto v = val;\
@@ -79,7 +79,7 @@ void FreelancerHacks()
 	Patch(0x0DBB9E, 0xEB);
 	Patch(0x0DBBE4, 0xEB);
 
-	//Disable camera level during turret view
+	//Disable camera level during turret view.
 	Patch(0x14A65B, 0x9C, 0xA1, 0x44, 0x97, 0x67, 0x00, 0x83, 0xC0, 0xF8, 0x50, 0xFF, 0x15, 0x70, 0x64, 0x5C, 0x00, 0x59, 0x91, 0x9D, 0x74, 0x0D, 0xA0, 0xCA, 0xEC, 0x67, 0x00, 0x88, 0x81, 0xF9, 0x00, 0x00, 0x00, 0xEB, 0x25, 0xB0, 0x00, 0x86, 0x81, 0xF9, 0x00, 0x00, 0x00, 0xA2, 0xCA, 0xEC, 0x67, 0x00);
 
 	//Allow missiles to fire continuously on right-click.
@@ -116,22 +116,22 @@ void CommonHacks()
 	//CEGun::CanSeeTargetObject fix for NPCs.
 	Patch(0x038590, 0xB0, 0x01, 0xC2, 0x04, 0x00);
 
-	//Radians value of NPC muzzle cone angle
+	//Radians value of NPC muzzle cone angle.
 	PatchV(0x08A185, 0.349065f);
 	PatchV(0x08AE95, 0.349065f);
 
 	//Makes suns honour the visit flag.
 	Patch(0x0D670F, 0xE9, 0x47, 0xFF, 0xFF, 0xFF);
 
-	//Make drag_modifier independent of interference/damage and apply it in cruise
+	//Make drag_modifier independent of interference/damage and apply it in cruise.
 	Patch(0x0DAD24, 0x41, 0x74);
 	Patch(0x053796, 0xEB);
 
-	//Cap maximum FPS at 120
+	//Cap maximum FPS at 120.
 	PatchV(0x01A74C, 120.0f);
 	Patch(0x01A892, 0x4C, 0xA7, 0x27);
 
-	//Include external equipment in cargo size
+	//Include external equipment in cargo size.
 	Patch(0x053048, 0xE3, 0x1F);
 	Patch(0x05330E, 0xE3, 0x1F);
 	Patch(0x0A9BA3, 0x00);
