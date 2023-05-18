@@ -63,7 +63,7 @@ void FreelancerHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(nullptr));
 
-	//Filter out incompatible builds on server by default. (THIS ISN'T PATCHING?)
+	//Filter out incompatible builds on server by default. (THIS ISN'T PATCHING, INVESTIGATE?)
 	PatchM(0x1628F4, 0x50);
 
 	//Prevent IPv6 addresses from appearing in the server list.
@@ -75,18 +75,18 @@ void FreelancerHacks()
 	//Disable shield batteries.
 	PatchM(0x0DAE0B, 0x00, 0x00, 0x00, 0x00);
 	PatchM(0x0DAE87, 0x00, 0x00, 0x00, 0x00);
-	PatchM(0x1D86E0, 0x00);
+	PatchM(0x1D8690, 0x00);
 
 	//Disable nanobots.
-	PatchM(0x0DAE0B, 0x00, 0x00, 0x00, 0x00);
-	PatchM(0x0DAE87, 0x00, 0x00, 0x00, 0x00);
+	PatchM(0x0DAD6D, 0x00, 0x00, 0x00, 0x00);
+	PatchM(0x0DADB4, 0x00, 0x00, 0x00, 0x00);
 	PatchM(0x1D86E0, 0x00);
 
 	//Update contact list refresh rate.
 	PatchV(0x1D7964, 0.25f);
 
 	//Update weapon panel refresh rate.
-	PatchV(0x1D8484, 0.25f);
+	PatchV(0x1D8484, 0.1f);
 
 	//Removes window borders when Freelancer is running in a window.
 	PatchM(0x02477A, 0x00, 0x00);
@@ -169,7 +169,7 @@ void CommonHacks()
 	//Disable Act_PlayerEnemyClamp.
 	PatchM(0x08E86A, 0xEB, 0x39);
 
-	//Adjusts CEGun::CanSeeTargetObject, allowing NPCs to 'see' everything.
+	//Fixes CEGun::CanSeeTargetObject, allowing NPCs to 'see' everything.
 	PatchM(0x038590, 0xB0, 0x01, 0xC2, 0x04, 0x00)
 
 	//Enable NPC countermeasure and scanner usage.
@@ -177,9 +177,6 @@ void CommonHacks()
 
 	//Enable mine droppers during cruise.
 	PatchM(0x03A2B3, 0x09);
-
-	//CEGun::CanSeeTargetObject fix for NPCs.
-	PatchM(0x038590, 0xB0, 0x01, 0xC2, 0x04, 0x00);
 
 	//Radians value of NPC muzzle cone angle.
 	PatchV(0x08A185, 0.349065f);
@@ -197,10 +194,10 @@ void CommonHacks()
 	PatchM(0x01A892, 0x4C, 0xA7, 0x27);
 
 	//Include external equipment in cargo size.
-	PatchM(0x053048, 0xE3, 0x1F);
-	PatchM(0x05330E, 0xE3, 0x1F);
-	PatchM(0x0A9BA3, 0x00);
-	PatchM(0x0AA904, 0x00);
+	//PatchM(0x053048, 0xE3, 0x1F);
+	//PatchM(0x05330E, 0xE3, 0x1F);
+	//PatchM(0x0A9BA3, 0x00);
+	//PatchM(0x0AA904, 0x00);
 
 	//disable ArchDB::Get random mission spew warning.
 	PatchM(0x0995B6, 0x90, 0x90);
