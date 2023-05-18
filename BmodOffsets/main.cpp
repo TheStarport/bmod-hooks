@@ -84,6 +84,11 @@ void FreelancerHacks()
 
 	//Allow missiles to fire continuously on right-click.
 	Patch(0x11D281, 0x00);
+
+	//String ID for the version text in the main menu.
+	PatchV(0x16DDEC, 459033);
+	PatchV(0x174890, 459033);
+
 }
 
 void ServerHacks()
