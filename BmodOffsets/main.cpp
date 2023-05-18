@@ -12,7 +12,7 @@ bool EndsWith(std::wstring const& value, std::wstring const& ending)
 	return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
-//Define our macro to write patches (Parameters are Offset, then bytes to write, size is dynamically calculated from the variadic arguments.
+//Define our macro to write patches. Parameters are Offset, then bytes to write, size is dynamically calculated from the variadic arguments.
 #define Patch(offset, ...)\
 {\
 	constexpr DWORD o = DWORD(offset);\
@@ -101,8 +101,8 @@ void ServerHacks()
 	//Energy weapons don't damage power.
 	Patch(0x00AFC0, 0xC2, 0x08, 0x00);
 
-	//Regenerate restart.fl on every game load.
-	//Patch(0x6903E, 0x00);
+	//Regenerate restart.fl on every game load (Also prevents the game from searching for save files, so these will be unavailable with this patched).
+	//Patch(0x69003, 0xEB);
 }
 
 void CommonHacks()
@@ -132,7 +132,7 @@ void CommonHacks()
 	Patch(0x0DAD24, 0x41, 0x74);
 	Patch(0x053796, 0xEB);
 
-	//Cap maximum FPS at 120.
+	//Cap framerate.
 	PatchV(0x01A74C, 120.0f);
 	Patch(0x01A892, 0x4C, 0xA7, 0x27);
 
