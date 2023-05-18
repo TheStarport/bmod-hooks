@@ -31,6 +31,7 @@ bool EndsWith(std::wstring const& value, std::wstring const& ending)
 void FreelancerHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(nullptr));
+
 	//Unlock visual cap on cruise speed.
 	Patch(0x0D5936, 0x90, 0xE9);
 
@@ -83,21 +84,65 @@ void FreelancerHacks()
 
 	//Allow missiles to fire continuously on right-click.
 	Patch(0x11D281, 0x00);
-
 }
 
 void ServerHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(L"server.dll"));
 
+	//Increase NPC despawn distance.
+	PatchV(0x086AEC, std::powf(20000.0f, 2.0f));
+
+	//Energy weapons don't damage power.
+	Patch(0x00AFC0, 0xC2, 0x08, 0x00);
+
+	//Regenerate restart.fl on every game load.
+	//Patch(0x6903E, 0x00);
 }
 
 void CommonHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(L"common.dll"));
 
+	//Disable Act_PlayerEnemyClamp.
+	Patch(0x08E86A, 0xEB, 0x39);
+
+	//Enable NPC countermeasure usage.
+	Patch(0x13E52C, 0x00);
+
+	//Enable mine droppers during cruise.
+	Patch(0x03A2B3, 0x09);
+
+	//CEGun::CanSeeTargetObject fix for NPCs.
+	Patch(0x038590, 0xB0, 0x01, 0xC2, 0x04, 0x00);
+
+	//Radians value of NPC muzzle cone angle
+	PatchV(0x08A185, 0.349065f);
+	PatchV(0x08AE95, 0.349065f);
+
+	//Makes suns honour the visit flag.
+	Patch(0x0D670F, 0xE9, 0x47, 0xFF, 0xFF, 0xFF);
+
+	//Make drag_modifier independent of interference/damage and apply it in cruise
+	Patch(0x0DAD24, 0x41, 0x74);
+	Patch(0x053796, 0xEB);
+
+	//Cap maximum FPS at 120
+	PatchV(0x01A74C, 120.0f);
+	Patch(0x01A892, 0x4C, 0xA7, 0x27);
+
+	//Include external equipment in cargo size
+	Patch(0x053048, 0xE3, 0x1F);
+	Patch(0x05330E, 0xE3, 0x1F);
+	Patch(0x0A9BA3, 0x00);
+	Patch(0x0AA904, 0x00);
+
+	//disable ArchDB::Get random mission spew warning.
+	Patch(0x0995B6, 0x90, 0x90);
+	Patch(0x0995FC, 0x90, 0x90);
 }
 
+//Run our hack process and check if the server or the client are running accordingly. Always run hacks for common.dll.
 void SetupHack()
 {
 	std::array<wchar_t, MAX_PATH> fileNameBuffer;
@@ -107,6 +152,7 @@ void SetupHack()
 	if (EndsWith(filename, L"Freelancer.exe"))
 	{
 		FreelancerHacks();
+		ServerHacks();
 	}
 	else if (EndsWith(filename, L"flserver.exe"))
 	{
