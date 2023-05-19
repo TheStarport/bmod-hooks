@@ -153,6 +153,9 @@ void ServerHacks()
 	//Energy weapons don't damage power.
 	PatchM(0x00AFC0, 0xC2, 0x08, 0x00);
 
+	//Respawn time for any solar object to regain full health once destroyed in MP.
+	PatchV(0x085530, 600.0);
+
 	//Disable encryption of file on creating MP character, saving, or creating the restart.fl file.
 	//PatchM(0x06BFA6, 0x14, 0xB3);
 	//PatchM(0x06E10D, 0x14, 0xB3);
