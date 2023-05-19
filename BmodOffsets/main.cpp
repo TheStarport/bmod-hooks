@@ -59,12 +59,13 @@ __declspec(naked) void RegenRestartNaked()
 	}
 }
 
+//Hacks for Freelancer.exe
 void FreelancerHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(nullptr));
 
-	//Filter out incompatible builds on server by default. (THIS ISN'T PATCHING, INVESTIGATE?)
-	PatchM(0x1628F4, 0x50);
+	//Filter out incompatible builds on server by default. Too early on it's own.
+	//PatchM(0x1628F4, 0x50);
 
 	//Prevent IPv6 addresses from appearing in the server list.
 	PatchM(0x1ACF6A, 0x40, 0x74, 0x63, 0x48, 0x51, 0x8D, 0x54, 0xE4, 0x20, 0x52, 0x83, 0xE9, 0x08);
@@ -139,6 +140,9 @@ void FreelancerHacks()
 	PatchM(0x03B348, 0xEB);
 }
 
+bool offsetsChanged = false;
+
+//Hacks for server.dll
 void ServerHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(L"server.dll"));
@@ -154,14 +158,19 @@ void ServerHacks()
 	//PatchM(0x06E10D, 0x14, 0xB3);
 	//PatchM(0x07399D, 0x14, 0xB3);
 
-	//Patch for restart.fl.
-	restartProcessSave = PVOID(DWORD(restartProcessSave) + mod);
-	restartReplacementOffset += mod;
-	restartReturnAddressFoundRestart += mod;
-	restartReturnAddressNormalSave += mod;
+	//Patch for restart.fl. This only occurs once when the game is started.
+	if (!offsetsChanged) 
+	{
+		offsetsChanged = true;
+		restartProcessSave = PVOID(DWORD(restartProcessSave) + mod);
+		restartReplacementOffset += mod;
+		restartReturnAddressFoundRestart += mod;
+		restartReturnAddressNormalSave += mod;
+	}
 	Utils::Memory::Patch(PBYTE(restartReplacementOffset), RegenRestartNaked);
 }
 
+//Hacks for common.dll
 void CommonHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(L"common.dll"));
@@ -212,7 +221,40 @@ void CommonHacks()
 	//PatchV(0x0057FA, 0.33f);
 }
 
-//Run our hack process and check if the server or the client are running accordingly. Always run hacks for common.dll.
+//Hacks for content.dll
+void ContentHacks()
+{
+	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(L"content.dll"));
+
+	//Force newplayer.fl to m13.ini (Open Singleplayer)
+	PatchM(0x04EE3A, 0xA2, 0x6A);
+
+	//Increase NPC despawn distance (SP and MP)
+	PatchV(0x0D3C36, 15000.0f);
+	PatchV(0x0D3D6E, 15000.0f);
+
+	//Increase maximum NPC spawning distance
+	PatchV(0x11BC68, 10000.0);
+
+	//NPC 'heartbeat' timer.
+	PatchV(0x0BA57A, 31.0f);
+}
+
+//Run all our patching functions.
+extern "C" EXPORT LPVOID CreateInstance(LPVOID a1, LPCSTR callsign, LPVOID a3)
+{
+	//LoadLibrary(L"../DLLS/BIN/content.dll");
+	ServerHacks();
+	ContentHacks();
+	return nullptr;
+}
+
+extern "C" EXPORT void DestroyInstance(LPVOID a1)
+{
+	return;
+}
+
+//Run these patches for the client only.
 void SetupHack()
 {
 	std::array<wchar_t, MAX_PATH> fileNameBuffer;
@@ -222,12 +264,7 @@ void SetupHack()
 	if (EndsWith(filename, L"Freelancer.exe"))
 	{
 		FreelancerHacks();
-		ServerHacks();
-	}
-	else if (EndsWith(filename, L"flserver.exe"))
-	{
-		ServerHacks();
-	}
+	}	
 	CommonHacks();
 }
 
