@@ -733,7 +733,7 @@ void SetupClassExpansion()
 {
 	ReadEquipmentClassMods();
 
-	DWORD common = (DWORD)GetModuleHandle("common.dll");
+	const DWORD common = reinterpret_cast<DWORD>(GetModuleHandle(L"common.dll"));
 	hpTableOffset += common;
 
 	gunReadReplacementOffset += common;
