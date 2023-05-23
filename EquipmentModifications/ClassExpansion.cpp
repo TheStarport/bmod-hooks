@@ -264,7 +264,7 @@ __declspec(naked) void InvMntHook(void)
 		add	esp, 4
 		mov	eax, [eax + 8]
 		push eax
-		call IsCustomHpType // For guns this returns 4
+		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
 		cmp	eax, HP_TYPE
 		pop	ecx
 		mov	al, 0
@@ -291,7 +291,7 @@ __declspec(naked) void InvSellHook(void)
 		mov	ecx, eax
 		mov	eax, [eax + 8]
 		push eax
-		call IsCustomHpType // For guns this returns 4
+		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
 		cmp	eax, HP_TYPE
 		mov	eax, 0
 		jae	done
@@ -316,7 +316,7 @@ __declspec(naked) void InvIconHook(void)
 		mov	ecx, eax
 		mov	eax, [eax + 8]
 		push eax
-		call IsCustomHpType // For guns this returns 4
+		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
 		cmp	eax, HP_TYPE
 		mov	eax, 0
 		jae	done
@@ -341,7 +341,7 @@ __declspec(naked) void InvHook(void)
 		mov	ecx, eax
 		mov	eax, [eax + 8]
 		push eax
-		call IsCustomHpType // For guns this returns 4
+		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
 		cmp	eax, HP_TYPE
 		mov	eax, 0
 		jae	done
@@ -368,7 +368,7 @@ __declspec(naked) void DealerHook(void)
 		jcxz	internal
 		mov	eax, [eax + 8]
 		push eax
-		call IsCustomHpType // For guns this returns 4
+		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
 		cmp	eax, HP_TYPE
 		mov	ecx, 0
 		jae	done
@@ -394,7 +394,7 @@ __declspec(naked) void DealerSelectedHook(void)
 		mov	ecx, eax
 		add	esp, 4
 		jcxz	internal
-		call IsCustomHpType // For guns this returns 4
+		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
 		cmp	eax, HP_TYPE
 		mov	ecx, 0
 		jae	done
@@ -422,7 +422,7 @@ __declspec(naked) void MountHook(void)
 		mov	ecx, eax
 		mov	eax, [eax+8]
 		push eax
-		call IsCustomHpType // For guns this returns 4
+		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
 		cmp	eax, HP_TYPE
 		mov	edi, 0
 		jae	done
