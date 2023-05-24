@@ -229,8 +229,12 @@ void ContentHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(L"content.dll"));
 
-	//Force newplayer.fl to m13.ini (Open Singleplayer)
-	PatchM(0x04EE3A, 0xA2, 0x6A);
+	Utils::CommandLineParser cmd;
+	if (!cmd.CmdOptionExists(L"-campaign")) 
+	{
+		//Force newplayer.fl to m13.ini (Open Singleplayer)
+		PatchM(0x04EE3A, 0xA2, 0x6A);
+	}
 
 	//Increase NPC despawn distance (SP and MP)
 	PatchV(0x0D3C36, 15000.0f);
