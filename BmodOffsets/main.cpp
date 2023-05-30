@@ -89,9 +89,13 @@ void FreelancerHacks()
 	//Update weapon panel refresh rate.
 	PatchV(0x1D8484, 0.1f);
 
-	//Removes window borders when Freelancer is running in a window.
-	PatchM(0x02477A, 0x00, 0x00);
-	PatchM(0x02490D, 0x00, 0x00);
+	Utils::CommandLineParser cmd;
+	if (!cmd.CmdOptionExists(L"-windowborders"))
+	{
+		//Removes window borders when Freelancer is running in a window.
+		PatchM(0x02477A, 0x00, 0x00);
+		PatchM(0x02490D, 0x00, 0x00);
+	}
 
 	//Cap framerate.
 	PatchV(0x0210A0C, 120.0f);
@@ -156,10 +160,14 @@ void ServerHacks()
 	//Respawn time for any solar object to regain full health once destroyed in MP.
 	PatchV(0x085530, 600.0);
 
-	//Disable encryption of file on creating MP character, saving, or creating the restart.fl file.
-	//PatchM(0x06BFA6, 0x14, 0xB3);
-	//PatchM(0x06E10D, 0x14, 0xB3);
-	//PatchM(0x07399D, 0x14, 0xB3);
+	Utils::CommandLineParser cmd;
+	if (!cmd.CmdOptionExists(L"-decrypt"))
+	{
+		//Disable encryption of file on creating MP character, saving, or creating the restart.fl file.
+		PatchM(0x06BFA6, 0x14, 0xB3);
+		PatchM(0x06E10D, 0x14, 0xB3);
+		PatchM(0x07399D, 0x14, 0xB3);
+	}
 
 	//Patch for restart.fl. This only occurs once when the game is started.
 	if (!offsetsChanged) 
