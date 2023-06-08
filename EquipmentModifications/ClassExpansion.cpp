@@ -5,6 +5,7 @@
 #include <vector>
 #include <optional>
 #include <map>
+#include <array>
 
 #include "../Utils.hpp"
 
@@ -49,7 +50,8 @@ std::vector<IdsBinding> idsBindings = {
   {  64, 1728 }, {  65, 1729 }, {  66, 1730 }, {   8, 1519 }, {   9, 1520 },
 };
 
-uint totalEquipmentCount = 67;
+constexpr uint startingEquipmentCount = 67;
+static uint totalEquipmentCount = startingEquipmentCount;
 
 std::vector<byte> mountList = {
   0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
@@ -103,28 +105,32 @@ void ReadEquipmentClassMods()
 			const std::string type = ini.get_value_string(0);
 			const std::string newHp = ini.get_value_string(1);
 			uint idsNumberRange = ini.get_value_int(2);
-
+			int idsOrder = ini.get_value_int(3);
+			int category = ini.get_value_int(4);
 			if (type.empty() || newHp.empty() || !idsNumberRange)
 			{
 				return;
 			}
 
-			int category;
-			if (type == "Gun" || type == "Turret")
+			// No category was explicitly set, so we infer it
+			if (category == 0)
 			{
-				category = 0;
-			}
-			else if (type == "Shield")
-			{
-				category = 2;
-			}
-			else if (type == "Powerplant" || type == "Engine")
-			{
-				category = 3;
-			}
-			else
-			{
-				category = 4;
+				if (type == "Gun" || type == "Turret")
+				{
+					category = 0;
+				}
+				else if (type == "Shield")
+				{
+					category = 2;
+				}
+				else if (type == "Powerplant" || type == "Engine")
+				{
+					category = 3;
+				}
+				else
+				{
+					category = 4;
+				}
 			}
 
 			// Add new description index
@@ -136,7 +142,7 @@ void ReadEquipmentClassMods()
 				hpStrings[totalEquipmentCount] = newHp + "_" + std::to_string(i);
 				hpCategoryMap[totalEquipmentCount] = category;
 				levelIndex.emplace_back(i);
-				equipIndex.emplace_back(2);
+				equipIndex.emplace_back(idsOrder);
 				idsBindings.emplace_back(totalEquipmentCount++, idsNumberRange++);
 				mountList.emplace_back(2);
 				mountDescriptionIndex.emplace_back(11);
@@ -145,7 +151,89 @@ void ReadEquipmentClassMods()
 	}
 }
 
-static std::unordered_map<uint, uint> customHpTypeMapping; // Map of item hash to specified HP Type
+static std::unordered_map<uint, std::vector<uint>> customHpTypeMapping; // Map of item hash to specified HP Type
+
+PBYTE gunHpTypeByIndexMemory = static_cast<PBYTE>(malloc(5));
+PBYTE shieldHpTypeByIndexMemory = static_cast<PBYTE>(malloc(5));
+PBYTE gunHpTypeCountMemory = static_cast<PBYTE>(malloc(5));
+PBYTE shieldHpTypeCountMemory = static_cast<PBYTE>(malloc(5));
+using GetHpTypeByIndexT = uint(*__fastcall)(Archetype::Equipment* equip, void* edx, uint index);
+using GetHpTypeCountT = uint(*__fastcall)(Archetype::Equipment* equip);
+GetHpTypeCountT getGunHpTypeCount = reinterpret_cast<GetHpTypeCountT>(GetProcAddress(GetModuleHandle("common.dll"), "?get_number_of_hp_types@Gun@Archetype@@QBEHXZ"));
+GetHpTypeCountT getShieldHpTypeCount = reinterpret_cast<GetHpTypeCountT>(GetProcAddress(GetModuleHandle("common.dll"), "?get_number_of_hp_types@ShieldGenerator@Archetype@@QBEHXZ"));
+GetHpTypeByIndexT getGunHpTypeByIndex = reinterpret_cast<GetHpTypeByIndexT>(GetProcAddress(GetModuleHandle("common.dll"), "?get_hp_type_by_index@Gun@Archetype@@QBE?AW4HpAttachmentType@@H@Z"));
+GetHpTypeByIndexT getShieldHpTypeByIndex = reinterpret_cast<GetHpTypeByIndexT>(GetProcAddress(GetModuleHandle("common.dll"), "?get_hp_type_by_index@ShieldGenerator@Archetype@@QBE?AW4HpAttachmentType@@H@Z"));
+
+uint GetCustomHpByIndex(const uint itemHash, const uint index)
+{
+	const auto mapping = customHpTypeMapping.find(itemHash);
+	if (mapping == customHpTypeMapping.end())
+	{
+		return 0;
+	}
+
+	if (mapping->second.size() <= index)
+	{
+		return 0;
+	}
+
+	return mapping->second[index];
+}
+
+uint __fastcall GetHpTypeCountDetour(const Archetype::Gun* gun)
+{
+	if (const auto found = customHpTypeMapping.find(gun->iArchID); found == customHpTypeMapping.end())
+	{
+		Utils::Memory::UnDetour(reinterpret_cast<PBYTE>(getGunHpTypeCount), gunHpTypeCountMemory);
+		const auto res = gun->get_number_of_hp_types();
+		Utils::Memory::Detour(reinterpret_cast<PBYTE>(getGunHpTypeCount), GetHpTypeCountDetour, gunHpTypeCountMemory);
+		return res;
+	}
+
+	const auto mapping = customHpTypeMapping.find(gun->iArchID);
+	return mapping == customHpTypeMapping.end() ? 0 : mapping->second.size();
+}
+
+uint __fastcall GetHpTypeByIndexDetour(const Archetype::Gun* gun, void* edx, uint index)
+{
+	if (const auto found = customHpTypeMapping.find(gun->iArchID); found == customHpTypeMapping.end())
+	{
+		Utils::Memory::UnDetour(reinterpret_cast<PBYTE>(getGunHpTypeByIndex), gunHpTypeByIndexMemory);
+		const auto res = gun->get_hp_type_by_index(index);
+		Utils::Memory::Detour(reinterpret_cast<PBYTE>(getGunHpTypeByIndex), GetHpTypeByIndexDetour, gunHpTypeByIndexMemory);
+		return res;
+	}
+
+	return GetCustomHpByIndex(gun->iArchID, index);
+}
+
+uint __fastcall GetShieldHpTypeCountDetour(const Archetype::Gun* shield)
+{
+	if (const auto found = customHpTypeMapping.find(shield->iArchID); found == customHpTypeMapping.end())
+	{
+		Utils::Memory::UnDetour(reinterpret_cast<PBYTE>(getShieldHpTypeCount), shieldHpTypeByIndexMemory);
+		const auto res = shield->get_number_of_hp_types();
+		Utils::Memory::Detour(reinterpret_cast<PBYTE>(getShieldHpTypeCount), GetShieldHpTypeCountDetour, shieldHpTypeByIndexMemory);
+		return res;
+	}
+
+	const auto mapping = customHpTypeMapping.find(shield->iArchID);
+	return mapping == customHpTypeMapping.end() ? 0 : mapping->second.size();
+}
+
+uint __fastcall GetShieldHpTypeByIndexDetour(const Archetype::ShieldGenerator* shield, void* edx, uint index)
+{
+	if (const auto found = customHpTypeMapping.find(shield->iArchID); found == customHpTypeMapping.end())
+	{
+		Utils::Memory::UnDetour(reinterpret_cast<PBYTE>(getShieldHpTypeByIndex), shieldHpTypeByIndexMemory);
+		const auto res = shield->get_hp_type_by_index(index);
+		Utils::Memory::Detour(reinterpret_cast<PBYTE>(getShieldHpTypeByIndex), GetShieldHpTypeByIndexDetour, shieldHpTypeByIndexMemory);
+		return res;
+	}
+
+	return GetCustomHpByIndex(shield->iArchID, index);
+}
+
 uint __fastcall HpTypeDetour(const char* hpString)
 {
 	if (hpString == nullptr)
@@ -158,29 +246,120 @@ uint __fastcall HpTypeDetour(const char* hpString)
 
 // If found return the custom number we setup
 // Otherwise return 0
-uint __stdcall IsCustomHpType(const uint hash)
+bool __stdcall IsCustomHpType(const uint hash)
 {
 	const auto found = customHpTypeMapping.find(hash);
-	return found != customHpTypeMapping.end() ? found->second : 0;
+	return found != customHpTypeMapping.end();
 }
 
 void __stdcall AddNewHpMapping(const uint hash, const uint hpType)
 {
-	customHpTypeMapping[hash] = hpType;
+	if (const auto mapping = customHpTypeMapping.find(hash); mapping == customHpTypeMapping.end())
+	{
+		customHpTypeMapping[hash] = { hpType };
+	}
+	else
+	{
+		mapping->second.emplace_back(hpType);
+	}
 }
+
+constexpr static DWORD ProcessEquipmentNotFoundOffset = 0x586192;
+constexpr static DWORD ProcessEquipmentFoundOffset = 0x5860C9;
+static uint storedHash = 0;
+__declspec(naked) void ProcessCustomHp()
+{
+	__asm
+	{
+		push eax
+		mov eax, storedHash
+		test eax, eax
+		jz notFound
+		push eax
+		call IsCustomHpType // is it one of ours
+		test al, al
+		jz notFound // If we found a valid match send it through
+		pop eax
+		jmp ProcessEquipmentFoundOffset
+
+		notFound :
+		pop eax
+			jmp ProcessEquipmentNotFoundOffset
+	}
+}
+
+constexpr DWORD CurrentItemHashRetAddr = 0x585FAC;
+__declspec(naked) void NakedCurrentItemHash()
+{
+	__asm
+	{
+		mov storedHash, 0 // Reset the stored hash if needed
+		add esp, 0x0C
+		push eax
+		mov eax, [esp + 0x20]
+		test eax, eax // if eax == 0 then not a gun
+		jnz found
+		mov eax, [esp + 0x24]
+		test eax, eax // if eax == 0 then not a shield
+		jz done
+
+		found :
+		mov eax, [eax + 8]
+			mov storedHash, eax
+
+			done :
+		pop eax
+			mov dword ptr[esp + 0x14], eax
+			jmp CurrentItemHashRetAddr
+	}
+}
+
+constexpr static DWORD WriteHardpointCountReturnAddress = 0x586026;
+__declspec(naked) void NakedWriteHardpointCount()
+{
+	__asm
+	{
+		mov     ebp, totalEquipmentCount
+		add     ebx, ecx
+		jmp WriteHardpointCountReturnAddress
+	}
+}
+
+//__declspec(naked) void NakedCleanUpItemHash()
+//{
+//	__asm
+//	{
+//		mov storedHash, 0
+//		// Do the stuff we replaced
+//		mov     al, byte ptr[esp + 0x5C]
+//		test    al, al
+//	}
+//}
+
+//constexpr static DWORD ItemCleanRetAddress = 0x5862F8;
+//__declspec(naked) void NakedCleanUpItemHash()
+//{
+//	__asm
+//	{
+//		mov storedHash, 0
+//		add esp, 4
+//		mov eax, esi
+//		jmp ItemCleanRetAddress
+//	}
+//}
 
 static DWORD hpTableOffset = 0x18CA40;
 
 static DWORD gunReadReplacementOffset = 0x9659E;
 static DWORD gunReadSearchVanillaEntry = 0x965A5;
 static DWORD gunReadFoundCustomEntry = 0x965CA;
-Archetype::Gun* gun;
+
 __declspec(naked) void HpTypeGunRead()
 {
 	__asm
 	{
 		push ebp
-		mov ebp, [esp+12]
+		mov ebp, [esp + 12]
 		mov esi, hpTableOffset
 		push eax
 		push edx
@@ -190,7 +369,7 @@ __declspec(naked) void HpTypeGunRead()
 		test eax, eax
 		jz notFound
 		push eax
-		mov ecx, [ebp+8]
+		mov ecx, [ebp + 8]
 		push ecx
 		call AddNewHpMapping
 		pop ecx
@@ -202,151 +381,152 @@ __declspec(naked) void HpTypeGunRead()
 
 		notFound :
 		pop ecx
-		pop edx
-		pop eax
-		pop ebp
-		xor edi, edi
-		jmp gunReadSearchVanillaEntry
+			pop edx
+			pop eax
+			pop ebp
+			xor edi, edi
+			jmp gunReadSearchVanillaEntry
 	}
 }
 
 static DWORD shieldReadReplacementOffset = 0x959C0;
 static DWORD shieldReadSearchVanillaEntry = 0x959C7;
 static DWORD shieldReadFoundCustomEntry = 0x959E8;
-/*__declspec(naked) void HpTypeShieldRead()
+__declspec(naked) void HpTypeShieldRead()
 {
 	__asm
 	{
+		push ebp
+		mov ebp, esi
 		mov esi, hpTableOffset
-		push eax
 		push edx
+		push eax
 		push ecx
 		mov ecx, eax
 		call HpTypeDetour
 		test eax, eax
 		jz notFound
+
+		push eax
+		mov ebp, [ebp + 8]
+		push ebp
+		call AddNewHpMapping
 		pop ecx
-		pop edx
 		mov esi, eax
 		pop eax
+		pop edx
+		pop ebp
 		jmp shieldReadFoundCustomEntry
 
-		notFound :
-		pop ecx
-			pop edx
+		notFound:
+			pop ecx
 			pop eax
+			pop edx
+			pop ebp
 			xor edi, edi
 			jmp shieldReadSearchVanillaEntry
 	}
-}*/
-
-#define RELOFS( from, to ) \
-  *(DWORD*)(from) = (PBYTE)(to) - (from) - 4
-
+}
 
 #define HP_TYPE 67
-
-// Handle the Internal Equipment inventory list.
-__declspec(naked) void InvMntHook(void)
+__declspec(naked) void InvMntHook()
 {
 	__asm {
 		xor al, al
 		test	edx, edx
 		jz	okay
-		cmp	edx, 3 // If page three
-		//jne	done
+		cmp	edx, 3
+		jne	done
 		test	ebp, ebp
 		jz	done
 		push	ecx
 		push	dword ptr[ebp + 0x48]
 		call	dword ptr ds : [0x5c603c] // Archetype::GetEquipment
 		mov	ecx, eax
+		mov	eax, [eax]
 		add	esp, 4
-		mov	eax, [eax + 8]
-		push eax
-		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
+		call	dword ptr[eax + 0x18]	// get_hp_type
 		cmp	eax, HP_TYPE
 		pop	ecx
 		mov	al, 0
 		mov	edx, 3
 		jb	done
 		okay :
-		mov	edx, 2 // if two can buy?
+		mov	edx, 2
 			done :
 			ret
 	}
 }
 
-__declspec(naked) void InvSellHook(void)
+__declspec(naked) void InvSellHook()
 {
 	__asm {
 		mov	eax, [esi + 0x32c]
-		cmp	eax, 3 // If page three
-		//jne	done
+		cmp	eax, 3
+		jne	done
 		push	edx
 		call	dword ptr ds : [0x5c603c] // Archetype::GetEquipment
 		add	esp, 4
 		test	eax, eax
 		jz	internal
 		mov	ecx, eax
-		mov	eax, [eax + 8]
-		push eax
-		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
+		mov	eax, [eax]
+		call	dword ptr[eax + 0x18]	// get_hp_type
 		cmp	eax, HP_TYPE
 		mov	eax, 0
 		jae	done
 internal:
-	mov	eax, 3 // if three can buy?
+	mov	eax, 3
 		done :
 		ret
 	}
 }
 
-__declspec(naked) void InvIconHook(void)
+
+__declspec(naked) void InvIconHook()
 {
 	__asm {
 		mov	eax, [esi + 0x32c]
-		cmp	eax, 3 // If page three
-		//jne	done
+		cmp	eax, 3
+		jne	done
 		push	dword ptr[esp + 0x28 + 4]
 		call	dword ptr ds : [0x5c603c] // Archetype::GetEquipment
 		add	esp, 4
 		test	eax, eax
 		jz	internal
 		mov	ecx, eax
-		mov	eax, [eax + 8]
-		push eax
-		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
+		mov	eax, [eax]
+		call	dword ptr[eax + 0x18]	// get_hp_type
 		cmp	eax, HP_TYPE
 		mov	eax, 0
 		jae	done
 internal:
-	mov	eax, 3 // if three can buy?
+	mov	eax, 3
 		done :
 		ret
 	}
 }
 
-__declspec(naked) void InvHook(void)
+
+__declspec(naked) void InvHook()
 {
 	__asm {
 		mov	eax, [edi + 0x32c]
-		cmp	eax, 3 // If page three
-		//jne	done
+		cmp	eax, 3
+		jne	done
 		push	dword ptr[ebp + 0x48]
 		call	dword ptr ds : [0x5c603c] // Archetype::GetEquipment
 		add	esp, 4
 		test	eax, eax
 		jz	internal
 		mov	ecx, eax
-		mov	eax, [eax + 8]
-		push eax
-		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
+		mov	eax, [eax]
+		call	dword ptr[eax + 0x18]	// get_hp_type
 		cmp	eax, HP_TYPE
 		mov	eax, 0
 		jae	done
 internal:
-	mov	eax, 3 // if three can buy?
+	mov	eax, 3
 		done :
 		ret
 	}
@@ -354,26 +534,25 @@ internal:
 
 
 // Handle the Internal Equipment dealer list.
-__declspec(naked) void DealerHook(void)
+__declspec(naked) void DealerHook()
 {
 	__asm {
 		push	eax
 		mov	ecx, [eax + 0x32c]
-		cmp	ecx, 3 // If page three
-		//jne	done
+		cmp	ecx, 3
+		jne	done
 		push	ebx
 		call	dword ptr ds : [0x5c603c] // Archetype::GetEquipment
 		mov	ecx, eax
 		add	esp, 4
 		jcxz	internal
-		mov	eax, [eax + 8]
-		push eax
-		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
+		mov	eax, [eax]
+		call	dword ptr[eax + 0x18]	// get_hp_type
 		cmp	eax, HP_TYPE
 		mov	ecx, 0
 		jae	done
 internal:
-	mov	ecx, 3 // if three can buy?
+	mov	ecx, 3
 		done :
 		pop	eax
 		ret
@@ -382,57 +561,55 @@ internal:
 
 
 // Handle selected Internal Equipment in the dealer list.
-__declspec(naked) void DealerSelectedHook(void)
+__declspec(naked) void DealerSelectedHook()
 {
 	__asm {
 		push	eax
 		mov	ecx, [eax + 0x32c]
-		cmp	ecx, 3 // If page three
-		//jne	done
+		cmp	ecx, 3
+		jne	done
 		push	ebp
 		call	dword ptr ds : [0x5c603c] // Archetype::GetEquipment
 		mov	ecx, eax
 		add	esp, 4
 		jcxz	internal
-		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
+		mov	eax, [eax]
+		call	dword ptr[eax + 0x18]	// get_hp_type
 		cmp	eax, HP_TYPE
 		mov	ecx, 0
 		jae	done
 internal:
-	mov	ecx, 3 // if three can buy?
+	mov	ecx, 3
 		done :
 		pop	eax
 		ret
 	}
 }
 
-
 // Handle mounting of Internal Equipment.
-__declspec(naked) void MountHook(void)
+__declspec(naked) void MountHook()
 {
 	__asm {
 		mov	edi, eax
-		cmp	eax, 3 // If page three
-		//jne	done
+		cmp	eax, 3
+		jne	done
 		push	dword ptr[esi + 4]
 		call	dword ptr ds : [0x5c603c] // Archetype::GetEquipment
 		add	esp, 4
 		test	eax, eax
 		jz	internal
 		mov	ecx, eax
-		mov	eax, [eax+8]
-		push eax
-		call IsCustomHpType // For guns this needs to returns 4 in order to not crash
+		mov	eax, [eax]
+		call	dword ptr[eax + 0x18]	// get_hp_type
 		cmp	eax, HP_TYPE
 		mov	edi, 0
 		jae	done
 internal:
-	mov	edi, 3 // Can buy?
+	mov	edi, 3
 		done :
 		ret	4
 	}
 }
-
 
 // Set the default type to the original value.
 __declspec(naked) void InitHook(void)
@@ -445,7 +622,7 @@ __declspec(naked) void InitHook(void)
 	}
 }
 
-#define ADDR_RDSHIP1 ((PBYTE)0x62f2f1d+1)
+const PBYTE ADDR_RDSHIP1 = reinterpret_cast<PBYTE>(0x62f2f1d + 1);
 
 DWORD __stdcall HpRange(const LPCSTR type)
 {
@@ -460,7 +637,8 @@ DWORD __stdcall HpRange(const LPCSTR type)
 			const int c = strtol(result.c_str(), &end, 10);
 			if (c < 1 || c > TotalClasses || *end)
 				break;
-			return HP_TYPE + std::distance(hpStrings.begin(), i) + c - 1;
+			auto e = 67 + std::distance(hpStrings.begin(), i);
+			return e;
 		}
 	}
 
@@ -525,7 +703,6 @@ __declspec(naked) void ReadHook(void)
 	}
 }
 
-
 // Special handling for MultiCruise.
 DWORD multicruise;
 
@@ -540,15 +717,6 @@ __declspec(naked) void ReadEngHook(void)
 	}
 }
 
-// get_hp_type for Power and Engine Archetypes.
-/*__declspec(naked) void get_hp_type(void)
-{
-	__asm {
-		movzx	eax, byte ptr[ecx + 0x6f]
-		ret
-	}
-}*/
-
 // Dynamically get our category out depending on the equipment type.
 // Guns / Turrets = category 0
 // Shields = category 2
@@ -556,7 +724,7 @@ __declspec(naked) void ReadEngHook(void)
 int __stdcall DetermineHpCategory(const uint hpType)
 {
 	const auto found = hpCategoryMap.find(hpType);
-	return found != hpCategoryMap.end() ? found->second : 3;
+	return found != hpCategoryMap.end() ? found->second : -1;
 }
 
 static constexpr DWORD HpCategoryReturnAddress = 0x586CAA;
@@ -568,7 +736,11 @@ __declspec(naked) void SetHpCategoryNaked()
 		push ecx
 		push esi
 		call DetermineHpCategory
+		cmp eax, -1
+		je done
 		mov ebp, eax
+
+		done:
 		pop ecx
 		pop edx
 		pop eax
@@ -576,164 +748,204 @@ __declspec(naked) void SetHpCategoryNaked()
 	}
 }
 
-void Patch(void)
+//const static DWORD* HpCategoryJumpTableAddress = reinterpret_cast<PDWORD>(0x585B64);
+//__declspec(naked) void SetHpCategoryItemNaked()
+//{
+//	__asm
+//	{
+//		push edx
+//		push ecx
+//		push eax
+//		call DetermineHpCategory 
+//		cmp eax, -1
+//		pop ecx
+//		je defaultBehavior
+//		pop edx
+//		retn
+//
+//		defaultBehavior:
+//		mov	eax, [HpCategoryJumpTableAddress]
+//		mov edx, 4
+//		imul edx, ecx
+//		add eax, edx
+//		pop edx
+//		mov eax, [eax]
+//		jmp eax
+//	}
+//}
+
+#define RELOFS( from, to ) \
+  *(DWORD*)(from) = (PBYTE)(to) - (from) - 4
+
+void CommonPatches()
 {
-#define ADDR_EQUIP1	((PBYTE)0x47c8de)	// show class number
-#define ADDR_EQUIP2	((PBYTE)0x47d9bb)	// inventory list
-#define ADDR_EQUIP3	((PBYTE)0x4804e8)	// selected item
-#define ADDR_EQUIP4	((PBYTE)0x482ea7)	// dealer list
-#define ADDR_EQUIP5	((PBYTE)0x47ce7d)	// mounted icon
-#define ADDR_EQUIP6	((PBYTE)0x47f73a)
-#define ADDR_EQUIP7	((PBYTE)0x47d974)
-#define ADDR_EQUIP8	((PBYTE)0x47e8d7)
-#define ADDR_EQUIP9	((PBYTE)0x483869)
-#define ADDR_LEVEL	((PBYTE)0x47c940)
-#define ADDR_EQUIP	((PBYTE)0x47e4de)
-#define ADDR_ENGXFER	((PBYTE)0x48089d)
-#define ADDR_ENGSELL	((PBYTE)0x480936)
-#define ADDR_MNTDESC	((PDWORD)0x47e041)
-#define ADDR_MNTNAME1 ((PBYTE)0x584728)
-#define ADDR_MNTNAME2 ((PBYTE)0x586c46)
-#define ADDR_MNTNAME3 ((PDWORD)0x586ccc)
-#define ADDR_MNTNAME4 ((PBYTE)0x585b17)
-#define ADDR_MNTNAME5 ((PDWORD)0x585b90)
-	//#define ADDR_MNTNAME6 ((PBYTE)0x586835)	// doesn't seem to be used
-#define ADDR_RESDLL	((PBYTE)0x5b0fad)
-#define ADDR_INTXFER	((PBYTE)0x47b020)
-#define ADDR_INTDESC	((PBYTE)0x47d608)
-#define ADDR_INTMNT	((PBYTE)0x47e820)
+	const auto AddrPower = reinterpret_cast<PBYTE>(0x62f80d0);
+	const auto AddrEngine = reinterpret_cast<PBYTE>(0x62f817e);
+	const auto AddrRead = reinterpret_cast<PBYTE>(0x62f2598);
+	const auto AddrRdPower = reinterpret_cast<PBYTE>(0x62f4878);
+	const auto AddrRdEngine = reinterpret_cast<PBYTE>(0x62f51b8);
+	const auto AddrHpPower = ((PDWORD)0x639990c);
+	const auto AddrHpEngine = ((PDWORD)0x6399ac4);
+	const auto AddrWarning = reinterpret_cast<PBYTE>(0x62a9774 + 1);
 
-#define ADDR_POWER	((PBYTE)0x62f80d0)
-#define ADDR_ENGINE	((PBYTE)0x62f817e)
-#define ADDR_RDSHIP	((PBYTE)0x62f2598)
-#define ADDR_RDPOWER	((PBYTE)0x62f4878)
-#define ADDR_RDENGINE ((PBYTE)0x62f51b8)
-#define ADDR_HPPOWER	((PDWORD)0x639990c)
-#define ADDR_HPENGINE ((PDWORD)0x6399ac4)
-#define ADDR_WARNING	((PBYTE)0x62a9774+1)
-
-	constexpr auto NewEquipmentCategory = 0x586CA5;
-
-	ProtectExecuteReadWrite(ADDR_INTXFER, 0x1e);
-	ProtectExecuteReadWrite(ADDR_EQUIP1, 1);
-	//ProtectExecuteReadWrite( ADDR_LEVEL,    16 );
-	//ProtectExecuteReadWrite( ADDR_EQUIP5,    6 );
-	ProtectExecuteReadWrite(ADDR_INTDESC, 7);
-	//ProtectExecuteReadWrite( ADDR_EQUIP7,    6 );
-	//ProtectExecuteReadWrite( ADDR_EQUIP2,    6 );
-	ProtectExecuteReadWrite(ADDR_MNTDESC, 4);
-	//ProtectExecuteReadWrite( ADDR_EQUIP,    12 );
-	//ProtectExecuteReadWrite( ADDR_INTMNT,    5 );
-	//ProtectExecuteReadWrite( ADDR_EQUIP8,    6 );
-	ProtectExecuteReadWrite(ADDR_EQUIP6, 5);
-	ProtectExecuteReadWrite(ADDR_EQUIP3, 6);
-	//ProtectExecuteReadWrite( ADDR_ENGXFER,   2 );
-	//ProtectExecuteReadWrite( ADDR_ENGSELL,   1 );
-	ProtectExecuteReadWrite(ADDR_EQUIP4, 6);
-	ProtectExecuteReadWrite(ADDR_EQUIP9, 1);
-	ProtectExecuteReadWrite(ADDR_MNTNAME1, 11);
-	ProtectExecuteReadWrite(ADDR_MNTNAME4, 12);
-	//ProtectExecuteReadWrite( ADDR_MNTNAME5,  8 );
-	ProtectExecuteReadWrite(ADDR_MNTNAME2, 97);
-	//ProtectExecuteReadWrite( ADDR_MNTNAME3,  4 );
-	ProtectExecuteReadWrite(ADDR_RESDLL, 6);
-
-	ProtectExecuteReadWrite(ADDR_WARNING, 1);
-	ProtectExecuteReadWrite(ADDR_RDSHIP, 5);
-	//ProtectExecuteReadWrite( ADDR_RDSHIP1,   1 );
-	ProtectExecuteReadWrite(ADDR_RDPOWER, 5);
-	ProtectExecuteReadWrite(ADDR_RDENGINE, 5);
-	ProtectExecuteReadWrite(ADDR_POWER, 6);
-	//ProtectExecuteReadWrite( ADDR_ENGINE,    6 );
-	ProtectReadWrite(ADDR_HPPOWER, 4);
-	//ProtectReadWrite( ADDR_HPENGINE,  4 );
-
-	// *** FREELANCER.EXE ***
-
-	// Have Internal Equipment recognise hard points.
-	*ADDR_EQUIP1 = *ADDR_EQUIP9 = 0xeb;
-
-	ADDR_EQUIP7[0] = ADDR_EQUIP2[0] = ADDR_EQUIP3[0] = ADDR_EQUIP4[0] =
-		ADDR_EQUIP5[0] = ADDR_EQUIP6[0] = ADDR_EQUIP8[0] = 0xe8;
-	RELOFS(ADDR_EQUIP5 + 1, InvIconHook);
-	RELOFS(ADDR_EQUIP7 + 1, InvMntHook);
-	RELOFS(ADDR_EQUIP8 + 1, InvSellHook);
-	RELOFS(ADDR_EQUIP2 + 1, InvHook);
-	RELOFS(ADDR_EQUIP3 + 1, DealerSelectedHook);
-	RELOFS(ADDR_EQUIP4 + 1, DealerHook);
-	RELOFS(ADDR_EQUIP6 + 1, MountHook);
-	ADDR_EQUIP7[5] = ADDR_EQUIP8[5] = ADDR_EQUIP2[5] = ADDR_EQUIP3[5] =
-		ADDR_EQUIP4[5] = ADDR_EQUIP5[5] = 0x90;
-
-	// Recognise the class of the new types.
-	ADDR_LEVEL[2] += 60;
-	*(DWORD*)(ADDR_LEVEL + 12) = (DWORD)levelIndex.data();
-
-	// Recognise the equipment list of the new types.
-	ADDR_EQUIP[2] += 60;
-	*(DWORD*)(ADDR_EQUIP + 8) = (DWORD)equipIndex.data();
-
-	// Allow engines to be sold/transferred.
-
-#ifdef ALLOW_ENGINE_SALE
-	ADDR_ENGXFER[0] = 0x90;
-	ADDR_ENGXFER[1] = 0xe9;
-	ADDR_ENGSELL[0] = 0xeb;
-
-	// Don't automatically transfer engines and powerplants.
-	ADDR_INTXFER[2] = 0x14;
-	ADDR_INTXFER[0x1d] = 0x16;
-#endif
-
-	// Adjust for the new mount names.
-	ADDR_MNTNAME1[2] += 60;
-	ADDR_MNTNAME2[0x33] += 60;
-	ADDR_MNTNAME2[0x43] += 60;
-	ADDR_MNTNAME4[2] += 60;
-	*reinterpret_cast<DWORD*>((ADDR_MNTNAME1 + 8)) = *reinterpret_cast<DWORD*>((ADDR_MNTNAME2 + 3)) = reinterpret_cast<DWORD>(idsBindings.data());
-	*ADDR_MNTNAME3 = reinterpret_cast<DWORD>(idsBindings.data()) + 4;
-	*reinterpret_cast<DWORD*>((ADDR_MNTNAME2 + 0x49)) = reinterpret_cast<DWORD>(mountList.data());
-	*reinterpret_cast<DWORD*>((ADDR_MNTNAME4 + 8)) = reinterpret_cast<DWORD>(mountDescriptionIndex.data());
-	for (uint i = 0; i < mountDesc.size() - 10; ++i)
-		ADDR_MNTNAME5[i] = reinterpret_cast<DWORD>(GetMountDesc);
-
-	// Actually recognise the new mount points.
-	ADDR_MNTNAME2[0x59] = 2;
-	Utils::Memory::Patch((PBYTE)NewEquipmentCategory, SetHpCategoryNaked);
-	ADDR_INTDESC[1] = 0x58;
-	ADDR_INTDESC[6] = 0xd2;
-	ADDR_INTMNT[1] = 0x78;
-	ADDR_INTMNT[4] = 0xc9;
-
-	// Point to the new mount descriptions.
-	*ADDR_MNTDESC = reinterpret_cast<DWORD>(mountDesc.data());
+	ProtectExecuteReadWrite(AddrWarning, 1);
+	ProtectExecuteReadWrite(AddrRead, 5);
+	ProtectExecuteReadWrite(AddrRdPower, 5);
+	ProtectExecuteReadWrite(AddrRdEngine, 5);
+	ProtectExecuteReadWrite(AddrPower, 6);
+	ProtectReadWrite(AddrHpPower, 4);
 
 	// *** COMMON.DLL ***
 
-	ADDR_POWER[0] = ADDR_ENGINE[0] = 0xe8;
-	RELOFS(ADDR_POWER + 1, InitHook);
-	RELOFS(ADDR_ENGINE + 1, InitHook);
-	ADDR_POWER[5] = ADDR_ENGINE[5] = 0x90;
+	AddrPower[0] = AddrEngine[0] = 0xe8;
+	RELOFS(AddrPower + 1, InitHook);
+	RELOFS(AddrEngine + 1, InitHook);
+	AddrPower[5] = AddrEngine[5] = 0x90;
 
-	if (*ADDR_RDENGINE == 0xBE)
-		multicruise = *(DWORD*)(ADDR_RDENGINE + 1);
-	ADDR_RDSHIP[0] = ADDR_RDPOWER[0] = ADDR_RDENGINE[0] = 0xe9;
-	RELOFS(ADDR_RDSHIP + 1, ShipHook);
-	RELOFS(ADDR_RDPOWER + 1, ReadHook);
-	RELOFS(ADDR_RDENGINE + 1, (multicruise) ? ReadEngHook : ReadHook);
+	if (*AddrRdEngine == 0xBE)
+		multicruise = *(DWORD*)(AddrRdEngine + 1);
+	AddrRead[0] = AddrRdPower[0] = AddrRdEngine[0] = 0xe9;
+	RELOFS(AddrRead + 1, ShipHook);
+	RELOFS(AddrRdPower + 1, ReadHook);
+	RELOFS(AddrRdEngine + 1, (multicruise) ? ReadEngHook : ReadHook);
 
 	// Point to our get_hp_type function.
 	//*ADDR_HPPOWER = *ADDR_HPENGINE = (DWORD)get_hp_type;
 
 	// Remove warning regarding connecting internal type to hardpoint.
-	*ADDR_WARNING = 0x4e;
+	*AddrWarning = 0x4e;
+
+	Utils::Memory::Detour(reinterpret_cast<PBYTE>(getGunHpTypeByIndex), GetHpTypeByIndexDetour, gunHpTypeByIndexMemory);
+	Utils::Memory::Detour(reinterpret_cast<PBYTE>(getGunHpTypeCount), GetHpTypeCountDetour, gunHpTypeCountMemory);
+	Utils::Memory::Detour(reinterpret_cast<PBYTE>(getShieldHpTypeCount), GetShieldHpTypeCountDetour, shieldHpTypeCountMemory);
+	Utils::Memory::Detour(reinterpret_cast<PBYTE>(getShieldHpTypeByIndex), GetShieldHpTypeByIndexDetour, shieldHpTypeByIndexMemory);
+
+	Utils::Memory::Patch((PBYTE)gunReadReplacementOffset, HpTypeGunRead);
+	Utils::Memory::Patch((PBYTE)shieldReadReplacementOffset, HpTypeShieldRead);
+}
+
+void FreelancerExePatches()
+{
+	const auto addrEquip1 = reinterpret_cast<PBYTE>(0x47c8de);	// show class number
+	const auto addrEquip2 = reinterpret_cast<PBYTE>(0x47d9bb);	// inventory list
+	const auto addrEquip3 = reinterpret_cast<PBYTE>(0x4804e8);	// selected item
+	const auto addrEquip4 = reinterpret_cast<PBYTE>(0x482ea7);	// dealer list
+	const auto addrEquip5 = reinterpret_cast<PBYTE>(0x47ce7d);	// mounted icon
+	const auto addrEquip6 = reinterpret_cast<PBYTE>(0x47f73a);
+	const auto addrEquip7 = reinterpret_cast<PBYTE>(0x47d974);
+	const auto addrEquip8 = reinterpret_cast<PBYTE>(0x47e8d7);
+	const auto addrEquip9 = reinterpret_cast<PBYTE>(0x483869);
+	const auto addrLevel = reinterpret_cast<PBYTE>(0x47c940);
+	const auto addrEquip = reinterpret_cast<PBYTE>(0x47e4de);
+	const auto addrEngXfer = reinterpret_cast<PBYTE>(0x48089d);
+	const auto addrEngSell = reinterpret_cast<PBYTE>(0x480936);
+	const auto addrMntDesc = ((PDWORD)0x47e041);
+	const auto addrMntName1 = reinterpret_cast<PBYTE>(0x584728);
+	const auto addrMntName2 = reinterpret_cast<PBYTE>(0x586c46);
+	const auto addrMntName3 = ((PDWORD)0x586ccc);
+	const auto addrMntName4 = reinterpret_cast<PBYTE>(0x585b17);
+	const auto addrMntName5 = ((PDWORD)0x585b90);
+
+	const auto addrIntTransfer = reinterpret_cast<PBYTE>(0x47b020);
+	const auto addrIntDesc = reinterpret_cast<PBYTE>(0x47d608);
+	const auto addrIntMnt = reinterpret_cast<PBYTE>(0x47e820);
+
+	ProtectExecuteReadWrite(addrEquip1, 1);
+	ProtectExecuteReadWrite(addrEquip3, 6);
+	ProtectExecuteReadWrite(addrEquip4, 6);
+	ProtectExecuteReadWrite(addrEquip6, 5);
+	ProtectExecuteReadWrite(addrEquip9, 1);
+
+	ProtectExecuteReadWrite(addrMntName1, 11);
+	ProtectExecuteReadWrite(addrMntName2, 97);
+	ProtectExecuteReadWrite(addrMntName4, 12);
+
+	ProtectExecuteReadWrite(addrIntTransfer, 0x1e);
+	ProtectExecuteReadWrite(addrIntDesc, 7);
+	ProtectExecuteReadWrite(addrIntMnt, 4);
+
+	// Have Internal Equipment recognise hard points.
+	*addrEquip1 = *addrEquip9 = 0xeb;
+
+	addrEquip7[0] = addrEquip2[0] = addrEquip3[0] = addrEquip4[0] =
+		addrEquip5[0] = addrEquip6[0] = addrEquip8[0] = 0xe8;
+	RELOFS(addrEquip5 + 1, InvIconHook);
+	RELOFS(addrEquip7 + 1, InvMntHook);
+	RELOFS(addrEquip8 + 1, InvSellHook);
+	RELOFS(addrEquip2 + 1, InvHook);
+	RELOFS(addrEquip3 + 1, DealerSelectedHook);
+	RELOFS(addrEquip4 + 1, DealerHook);
+	RELOFS(addrEquip6 + 1, MountHook);
+	addrEquip7[5] = addrEquip8[5] = addrEquip2[5] = addrEquip3[5] =
+		addrEquip4[5] = addrEquip5[5] = 0x90;
+
+	// Recognise the class of the new types.
+	addrLevel[2] = levelIndex.size();
+	*reinterpret_cast<DWORD*>((addrLevel + 12)) = reinterpret_cast<DWORD>(levelIndex.data());
+
+	// Recognise the equipment list of the new types.
+	addrEquip[2] = equipIndex.size();
+	*reinterpret_cast<DWORD*>((addrEquip + 8)) = reinterpret_cast<DWORD>(equipIndex.data());
+
+	constexpr auto HardpointCategoryReadAddress = 0x586Ca5;
+	constexpr auto EquipmentCategoryReadAddress = 0x585B23;
+
+#ifdef ALLOW_ENGINE_SALE
+	// allow engines to be sold/transferred.
+	addrEngXfer[0] = 0x90;
+	addrEngXfer[1] = 0xe9;
+	addrEngSell[0] = 0xeb;
+
+	// Don't automatically transfer engines and powerplants.
+	addrIntTransfer[2] = 0x14;
+	addrIntTransfer[0x1d] = 0x16;
+#endif
+
+	// adjust for the new mount names.
+	addrMntName1[2] = idsBindings.size();
+	addrMntName2[0x33] = mountList.size();
+	addrMntName2[0x43] = mountList.size();
+	addrMntName4[2] = mountDescriptionIndex.size();
+	*reinterpret_cast<DWORD*>((addrMntName1 + 8)) = *reinterpret_cast<DWORD*>((addrMntName2 + 3)) = reinterpret_cast<DWORD>(idsBindings.data());
+	*addrMntName3 = reinterpret_cast<DWORD>(idsBindings.data()) + 4;
+	*reinterpret_cast<DWORD*>((addrMntName2 + 0x49)) = reinterpret_cast<DWORD>(mountList.data());
+	*reinterpret_cast<DWORD*>((addrMntName4 + 8)) = reinterpret_cast<DWORD>(mountDescriptionIndex.data());
+	for (uint i = 0; i < mountDesc.size() - 10; ++i)
+		addrMntName5[i] = reinterpret_cast<DWORD>(GetMountDesc);
+
+	// actually recognise the new mount points.
+	addrMntName2[0x59] = 2;
+	//addrMntName2[0x60] = 3; // category
+	addrIntDesc[1] = 0x58;
+	addrIntDesc[6] = 0xd2;
+	addrIntMnt[1] = 0x78;
+	addrIntMnt[4] = 0xc9;
+
+	// Point to the new mount descriptions.
+	*addrMntDesc = reinterpret_cast<DWORD>(mountDesc.data());
+
+	// Function Detours/Patches
+	Utils::Memory::Patch(reinterpret_cast<PBYTE>(HardpointCategoryReadAddress), SetHpCategoryNaked);
+
+	{
+		std::array<byte, 2> patch = { 0xEB, 0x12 };
+		Utils::Memory::WriteProcMem(0x583651, patch.data(), patch.size()); 
+	}
+
+	//Utils::Memory::Patch(reinterpret_cast<PBYTE>(EquipmentCategoryReadAddress), SetHpCategoryItemNaked);
+	//Utils::Memory::Patch(PBYTE(0x5860C3), ProcessCustomHp);
+	//Utils::Memory::Patch(PBYTE(0x585F9F), NakedCurrentItemHash);;
+	//Utils::Memory::Patch(PBYTE(0x586021), NakedWriteHardpointCount);
+
+	//Utils::Memory::Patch(PBYTE(0x586182), NakedCleanUpItemHash);
+	//Utils::Memory::Patch(PBYTE(0x586216), NakedCleanUpItemHash);
 }
 
 void SetupClassExpansion()
 {
 	ReadEquipmentClassMods();
 
-	const DWORD common = reinterpret_cast<DWORD>(GetModuleHandle(L"common.dll"));
+	auto common = (DWORD)GetModuleHandle("common.dll");
 	hpTableOffset += common;
 
 	gunReadReplacementOffset += common;
@@ -743,8 +955,10 @@ void SetupClassExpansion()
 	shieldReadReplacementOffset += common;
 	shieldReadSearchVanillaEntry += common;
 
-	Patch();
-
-	Utils::Memory::Patch((PBYTE)gunReadReplacementOffset, HpTypeGunRead);
-	//Utils::Memory::Patch((PBYTE)shieldReadReplacementOffset, HpTypeShieldRead);
+	CommonPatches();
+	
+	if (Utils::Memory::GetCurrentExe() == "Freelancer.exe")
+	{
+		FreelancerExePatches();
+	}	
 }

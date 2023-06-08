@@ -4,7 +4,7 @@
 
 typedef void(*GlobalTimeFunc)(double delta);
 unsigned char* data;
-GlobalTimeFunc GlobalTimingFunction;
+GlobalTimeFunc globalTimingFunction;
 
 constexpr double SixtyFramesPerSecond = 1.0 / 60.0;
 double timeCounter;
@@ -20,23 +20,33 @@ void __cdecl Update(double delta)
 	}
 	
 
-	Utils::Memory::UnDetour((unsigned char*)GlobalTimingFunction, data);
-	GlobalTimingFunction(delta);
-	Utils::Memory::Detour((unsigned char*)GlobalTimingFunction, Update, data);
+	Utils::Memory::UnDetour((unsigned char*)globalTimingFunction, data);
+	globalTimingFunction(delta);
+	Utils::Memory::Detour((unsigned char*)globalTimingFunction, Update, data);
+}
+
+void FreelancerOnlyHacks()
+{
+	if (Utils::Memory::GetCurrentExe() != "Freelancer.exe")
+	{
+		return;
+	}
+
+	SetupCustomClassName();
+	InitBurstMod();
 }
 
 void SetupHack()
 {
 	// Setup hooks
 	HMODULE common = GetModuleHandleA("common");
-	GlobalTimingFunction = (GlobalTimeFunc)GetProcAddress(common, "?UpdateGlobalTime@Timing@@YAXN@Z");
+	globalTimingFunction = (GlobalTimeFunc)GetProcAddress(common, "?UpdateGlobalTime@Timing@@YAXN@Z");
 	data = (unsigned char*)malloc(5);
-	Utils::Memory::Detour((unsigned char*)GlobalTimingFunction, Update, data);
-
+	Utils::Memory::Detour((unsigned char*)globalTimingFunction, Update, data);
 
 	SetupClassExpansion();
-	SetupCustomClassName();
-	InitBurstMod();
+
+	FreelancerOnlyHacks();
 }
 
 BOOL WINAPI DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
