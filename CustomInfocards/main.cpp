@@ -129,8 +129,8 @@ uint SetGunInfocard(Archetype::Gun* gun, byte flags)
 	uint len = 0;
 	uint munid = gun->iProjectileArchID;
 	auto mun = reinterpret_cast<Archetype::Munition*>(Archetype::GetEquipment(munid));
-	uint motorid = mun->iMotorID;
-	auto motor = reinterpret_cast<Archetype::MotorData*>(Archetype::GetMotor(motorid));
+	//uint motorid = mun->iMotorID;
+	//auto motor = reinterpret_cast<Archetype::MotorData*>(Archetype::GetMotor(motorid));
 	uint explid = mun->iExplosionArchID;
 	auto expl = reinterpret_cast<Archetype::Explosion*>(Archetype::GetEquipment(explid));
 
