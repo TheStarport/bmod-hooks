@@ -13,6 +13,7 @@ const wchar_t* f0fmtPercent = L"%.0f%%";
 const wchar_t* f2fmtS = L" %.2fs";
 const wchar_t* f0fmtSpace = L" %.0f";
 const wchar_t* ufmt = L"%u";
+const wchar_t* f0fmtv = L" %.0f (%.0f/s)";
 
 LPWSTR buf = (LPWSTR)0x66fc60; // internal WCHAR buf[4096]
 typedef uint(*GetStringT)(void* rsrc, uint res, LPWSTR buf, uint len);
@@ -46,11 +47,11 @@ void GetStatLine(byte flags, uint* len, uint name_id, const wchar_t* value_fmt,
 
 uint SetPowerCoreInfocard(Archetype::Power* powercore, byte flags)
 {
-	// Energy Capacity:   1000 GJ
-	// Regeneration Rate: 95 GW
+	// Energy Capacity:   1000
+	// Regeneration Rate: 95
 	uint len = 0;
-	GetStatLine(flags, &len, 1758, ifmt, 459504, (int)powercore->fCapacity);
-	GetStatLine(flags, &len, 1753, ifmt, 459505, (int)powercore->fChargeRate);
+	GetStatLine(flags, &len, 1758, ifmt, 0, (int)powercore->fCapacity);
+	GetStatLine(flags, &len, 1753, ifmt, 0, (int)powercore->fChargeRate);
 	return len;
 }
 
@@ -59,12 +60,12 @@ uint SetEngineInfocard(Archetype::Engine* engine, byte flags)
 	// Top Speed:			80 m/s
 	// Reverse Speed:       16 m/s
 	// Cruise Charge Time:	5.00s
-	// Cruise Energy Drain: 20 GW
+	// Cruise Energy Drain: 20
 	uint len = 0;
 	GetStatLine(flags, &len, 945, ifmt, 1760, (int)(engine->fMaxForce / engine->fLinearDrag));
 	GetStatLine(flags, &len, 1699, ifmt, 1760, (int)((engine->fMaxForce / engine->fLinearDrag) * engine->fReverseFraction));
 	GetStatLine(flags, &len, 1762, f2fmtS, 0, engine->fCruiseChargeTime);
-	GetStatLine(flags, &len, 1763, ifmt, 459505, (int)engine->fCruisePowerUsage);
+	GetStatLine(flags, &len, 1763, ifmt, 0, (int)engine->fCruisePowerUsage);
 	return len;
 }
 
@@ -101,70 +102,103 @@ uint SetShieldGeneratorInfocard(Archetype::ShieldGenerator* shieldgenerator, byt
 	// Shield Capacity:		  3570 u
 	// Regeneration Rate:	  320 u/s
 	// Rebuild Time:		  9.45s
-	// Rebuild Energy Drain:  41 GW
-	// Constant Energy Drain: 271 GW
+	// Rebuild Energy Drain:  41
+	// Constant Energy Drain: 271
 	uint len = 0;
 	GetStatLine(flags, &len, 1752, f0fmt, 459506, shieldgenerator->fMaxCapacity * (1.0f - shieldgenerator->fOfflineThreshold));
 	GetStatLine(flags, &len, 1753, f0fmt, 459507, shieldgenerator->fRegenerationRate);
 	GetStatLine(flags, &len, 479579, f2fmtS, 0, shieldgenerator->fOfflineRebuildTime);
-	GetStatLine(flags, &len, 479577, f0fmtSpace, 459505, shieldgenerator->fRebuildPowerDraw);
-	GetStatLine(flags, &len, 479578, f0fmtSpace, 459505, shieldgenerator->fConstantPowerDraw);
+	GetStatLine(flags, &len, 479577, f0fmtSpace, 0, shieldgenerator->fRebuildPowerDraw);
+	GetStatLine(flags, &len, 479578, f0fmtSpace, 0, shieldgenerator->fConstantPowerDraw);
 	return len;
 }
 
 uint SetGunInfocard(Archetype::Gun* gun, byte flags)
 {
-	// Hull Damage Per Shot: 250
-	// Hull Average DPS: 1000/s
-	// Shield Damage Per Shot: 251
-	// Shield Average DPS: 500/s
+	// Hull Damage Per Shot: 250 (1000/s)
+	// Shield Damage Per Shot: 251 (500/s)
 	// Range: 742m
 	// Refire Rate: 3.03/s
 	// Projectile Speed: 1776 m/s
 	// Spread: 2° (If present)
-	// Energy Usage: 49 GW (If present)
-	// Sustained Energy Usage: 490 GW (If present)
+	// Energy Usage: 49 (492/s)
 	// Turn Rate: 15°/s (If present)
 	// Mount: Gimballed, 40°
 	uint len = 0;
 	uint munid = gun->iProjectileArchID;
 	auto mun = reinterpret_cast<Archetype::Munition*>(Archetype::GetEquipment(munid));
-	//uint motorid = mun->iMotorID;
-	//auto motor = reinterpret_cast<Archetype::MotorData*>(Archetype::GetMotor(motorid));
+	uint motorid = mun->iMotorID;
+	auto motor = Archetype::GetMotor(motorid);
 	uint explid = mun->iExplosionArchID;
-	auto expl = reinterpret_cast<Archetype::Explosion*>(Archetype::GetEquipment(explid));
+	ID_String ExplosionIDS;
+	ExplosionIDS.id = explid;
+	auto expl = Archetype::GetExplosion(ExplosionIDS);
 
-	if (mun->fHullDamage != 0)
+	if (mun->fHullDamage > 0)
 	{
-		GetStatLine(flags, &len, 1743, f0fmt, 0, mun->fHullDamage);
-		GetStatLine(flags, &len, 459509, f0fmtSpace, 459508, (mun->fHullDamage * (1.0f / gun->fRefireDelay)));
+		GetStatLine(flags, &len, 459517, f0fmtv, 0, mun->fHullDamage, (mun->fHullDamage * (1.0f / gun->fRefireDelay)));
+	}
+	if (mun->fHullDamage < 0)
+	{
+		//If fHullDamage damage is negative, change the infocard line to the repair gun one and convert to a positive number.
+		GetStatLine(flags, &len, 459515, f0fmtv, 0, mun->fHullDamage * -1, ((mun->fHullDamage * -1) * (1.0f / gun->fRefireDelay)));
 	}
 	if (mun->fEnergyDamage != 0)
 	{
-		GetStatLine(flags, &len, 1744, f0fmt, 0, mun->fEnergyDamage);
-		GetStatLine(flags, &len, 459510, f0fmtSpace, 459508, (mun->fEnergyDamage * (1.0f / gun->fRefireDelay)));
+		GetStatLine(flags, &len, 459518, f0fmtv, 0, mun->fEnergyDamage, (mun->fEnergyDamage * (1.0f / gun->fRefireDelay)));
 	}
 	if (explid != 0)
 	{
-		GetStatLine(flags, &len, 1744, f0fmt, 0, expl->fEnergyDamage);
+		if (expl->fHullDamage > 0)
+		{
+			GetStatLine(flags, &len, 459517, f0fmtv, 0, expl->fHullDamage, (expl->fHullDamage * (1.0f / gun->fRefireDelay)));
+		}
+		if (expl->fHullDamage < 0)
+		{
+			//If fHullDamage damage is negative, change the infocard line to the repair gun one and convert to a positive number.
+			GetStatLine(flags, &len, 459515, f0fmtv, 0, expl->fHullDamage * -1, ((expl->fHullDamage * -1) * (1.0f / gun->fRefireDelay)));
+		}
+		if (expl->fEnergyDamage != 0)
+		{
+			GetStatLine(flags, &len, 459518, f0fmtv, 0, expl->fEnergyDamage, (expl->fEnergyDamage * (1.0f / gun->fRefireDelay)));
+		}
+
 	}
-	GetStatLine(flags, &len, 1745, f0fmt, 1759, (mun->fLifeTime * gun->fMuzzleVelocity));
+	if (motorid == 0)
+	{
+		GetStatLine(flags, &len, 1745, f0fmt, 1759, (mun->fLifeTime * gun->fMuzzleVelocity));
+	}
+	if (motorid != 0)
+	{
+		//If the munition has a motor, then use the missile range formula instead (This one is currently wrong). 
+		auto topSpeed = motor->fLifetime * motor->fAccel;
+		auto accelDuration = mun->fLifeTime - motor->fLifetime;
+		auto totalVelocity = gun->fMuzzleVelocity * motor->fLifetime + 1 / 2 * motor->fAccel * std::pow(motor->fLifetime, 2);
+		GetStatLine(flags, &len, 1745, f0fmt, 1759, totalVelocity + (accelDuration * topSpeed));
+	}
 	GetStatLine(flags, &len, 1747, f2fmt, 459508, (1.0f / gun->fRefireDelay));
-	GetStatLine(flags, &len, 1746, f0fmt, 1760, gun->fMuzzleVelocity);
+	if (motorid == 0)
+	{
+		GetStatLine(flags, &len, 1746, f0fmt, 1760, gun->fMuzzleVelocity);
+	}
+	if (motorid != 0)
+	{
+		//If it's a missile, display top speed instead of velocity.
+		GetStatLine(flags, &len, 945, f0fmt, 1760, motor->fLifetime * motor->fAccel + gun->fMuzzleVelocity);
+	}
 	if (gun->fDispersionAngle > 0.0f)
 	{
-		GetStatLine(flags, &len, 459503, f0fmtSpace, 459511, (gun->fDispersionAngle * 180.0f / 3.141592653f));
+		GetStatLine(flags, &len, 459503, f2fmt, 459511, (gun->fDispersionAngle * 180.0f / 3.141592653f));
 	}
 	if (gun->fPowerUsage > 0.0f)
 	{
-		GetStatLine(flags, &len, 1748, f0fmt, 459505, gun->fPowerUsage);
-		GetStatLine(flags, &len, 459512, f0fmtSpace, 459505, (gun->fPowerUsage * (1.0f / gun->fRefireDelay)));
+		GetStatLine(flags, &len, 1748, f0fmtv, 0, gun->fPowerUsage, (gun->fPowerUsage * (1.0f / gun->fRefireDelay)));
 	}
-	if (mun->iExplosionArchID != 0)
+	if (mun->iExplosionArchID != 0 and mun->fMaxAngularVelocity > 0.1f)
 	{
-		GetStatLine(flags, &len, 459513, f0fmtSpace, 459514, (mun->fMaxAngularVelocity * 180.0f / 3.141592653f));
+		//If it's a missile and it can turn, display it's turn rate.
+		GetStatLine(flags, &len, 459513, f0fmt, 459514, (mun->fMaxAngularVelocity * 180.0f / 3.141592653f));
 	}
-	//GetStatLine(flags, &len, 977, f2fmt, 0, mun->bForceGunOri);											
 	return len;
 }
 
@@ -177,22 +211,35 @@ uint SetMineDropperInfocard(Archetype::MineDropper* minedropper, byte flags)
 	// Top Speed: 30 m/s
 	// Lifetime: 10.50s
 	// Seeker Distance: 100m
-	// Energy Usage: 25 GW (If present)
+	// Energy Usage: 25 (If present)
 	uint len = 0;
 	uint munid = minedropper->iProjectileArchID;
 	auto mun = reinterpret_cast<Archetype::Mine*>(Archetype::GetEquipment(munid));
 	uint explid = mun->iExplosionArchID;
-	auto expl = reinterpret_cast<Archetype::Explosion*>(Archetype::GetEquipment(explid));
-	GetStatLine(flags, &len, 1743, f0fmt, 0, expl->fHullDamage);
-	GetStatLine(flags, &len, 1744, f0fmt, 0, expl->fEnergyDamage);
-	GetStatLine(flags, &len, 1744, f0fmt, 1759, expl->fRadius);
+	ID_String ExplosionIDS;
+	ExplosionIDS.id = explid;
+	auto expl = Archetype::GetExplosion(ExplosionIDS);
+
+	if (expl->fHullDamage > 0)
+	{
+		GetStatLine(flags, &len, 459517, f0fmt, 0, expl->fHullDamage);
+	}
+	if (expl->fHullDamage < 0)
+	{
+		GetStatLine(flags, &len, 459515, f0fmt, 0, expl->fHullDamage * -1);
+	}
+	if (expl->fEnergyDamage > 0)
+	{
+		GetStatLine(flags, &len, 459518, f0fmt, 0, expl->fEnergyDamage);
+	}
+	GetStatLine(flags, &len, 1749, f0fmt, 1759, expl->fRadius);
 	GetStatLine(flags, &len, 1747, f2fmt, 459508, (1.0f / minedropper->fRefireDelay));
-	GetStatLine(flags, &len, 1744, f0fmt, 1760, mun->fTopSpeed);
-	GetStatLine(flags, &len, 1745, f2fmtS, 0, mun->fLifeTime);
-	GetStatLine(flags, &len, 1744, f0fmt, 1759, mun->fSeekerDist);
+	GetStatLine(flags, &len, 945, f0fmt, 1760, mun->fTopSpeed);
+	GetStatLine(flags, &len, 479572, f2fmtS, 0, mun->fLifeTime);
+	GetStatLine(flags, &len, 479575, f0fmt, 1759, mun->fSeekerDist);
 	if (minedropper->fPowerUsage > 0.0f)
 	{
-		GetStatLine(flags, &len, 1746, f0fmt, 1760, minedropper->fPowerUsage);
+		GetStatLine(flags, &len, 1748, f0fmt, 0, minedropper->fPowerUsage);
 	}
 	return len;
 }
@@ -203,7 +250,7 @@ uint SetCounterMeasureDropperInfocard(Archetype::CounterMeasureDropper* counterm
 	// Decoy Range: 1000m
 	// Projectile Speed: 1500 m/s
 	// Refire Rate: 8.33/s
-	// Energy Usage: 5 GW
+	// Energy Usage: 5
 	uint len = 0;
 	uint munid = countermeasuredropper->iProjectileArchID;
 	auto mun = reinterpret_cast<Archetype::CounterMeasure*>(Archetype::GetEquipment(munid));
@@ -211,7 +258,7 @@ uint SetCounterMeasureDropperInfocard(Archetype::CounterMeasureDropper* counterm
 	GetStatLine(flags, &len, 1750, f0fmt, 1759, mun->fRange);
 	GetStatLine(flags, &len, 1746, f0fmt, 1760, countermeasuredropper->fMuzzleVelocity);
 	GetStatLine(flags, &len, 1747, f2fmt, 459508, (1.0f / countermeasuredropper->fRefireDelay));
-	GetStatLine(flags, &len, 1748, f0fmt, 459505, countermeasuredropper->fPowerUsage);
+	GetStatLine(flags, &len, 1748, f0fmt, 0, countermeasuredropper->fPowerUsage);
 	return len;
 }
 
