@@ -566,6 +566,15 @@ namespace Archetype
 		// and some other stuff
 	};
 
+	struct IMPORT MotorData 
+	{
+		/*  0 */ uint vTable;
+		/*  1 */ uint iArchId;
+		/*  2 */ float fDelay;
+		/*  3 */ float fAccel;
+		/*  4 */ float fLifetime;
+	};
+
 	struct IMPORT Launcher : public AttachedEquipment
 	{
 		Launcher(struct Launcher const &);
