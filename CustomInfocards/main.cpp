@@ -183,11 +183,11 @@ uint SetGunInfocard(Archetype::Gun* gun, byte flags)
 	}
 	if (motorId != 0)
 	{
-		//If the munition has a motor, then use the missile range formula instead (This one is currently wrong). 
 		auto topSpeed = motor->fLifetime * motor->fAccel;
-		auto accelDuration = munition->fLifeTime - motor->fLifetime;
-		auto totalVelocity = gun->fMuzzleVelocity * motor->fLifetime + 1 / 2 * motor->fAccel * std::pow(motor->fLifetime, 2);
-		GetStatLine(flags, &len, 459526, f0fmt, 1759, totalVelocity + (accelDuration * topSpeed));
+		auto accelerationCap = munition->fLifeTime - motor->fLifetime;
+
+		//If the munition has a motor, then use the missile range formula instead. 
+		GetStatLine(flags, &len, 459538, f0fmt, 1759, (gun->fMuzzleVelocity * motor->fLifetime + (motor->fAccel / 2) * std::pow(motor->fLifetime, 2)) + accelerationCap * topSpeed);
 	}
 	if (gun->fDispersionAngle > 0.0f and munition->fMaxAngularVelocity == 100.0f or gun->iProjectileArchID == 2356034817 or gun->iProjectileArchID == 2782560389)
 	{
@@ -313,11 +313,6 @@ uint SetMunitionInfocard(Archetype::Munition* munition, byte flags)
 		}
 		GetStatLine(flags, &len, 459529, f0fmt, 1759, explosion->fRadius);
 		GetStatLine(flags, &len, 459530, f2fmtS, 0, munition->fLifeTime);
-
-		if (munition->fDetonationDist > 0)
-		{
-			GetStatLine(flags, &len, 459537, f0fmt, 1759, munition->fDetonationDist);
-		}
 	}
 	return len;
 }
