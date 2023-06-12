@@ -258,11 +258,11 @@ uint SetCounterMeasureDropperInfocard(Archetype::CounterMeasureDropper* counterm
 	uint len = 0;
 	uint munitionId = countermeasuredropper->iProjectileArchID;
 	auto munition = reinterpret_cast<Archetype::CounterMeasure*>(Archetype::GetEquipment(munitionId));
-	GetStatLine(flags, &len, 1751, ifmt, 0, munition->fDiversionPctg);
+	GetStatLine(flags, &len, 1751, f0fmtPercent, 0, (float)munition->fDiversionPctg);
 	GetStatLine(flags, &len, 1750, f0fmt, 1759, munition->fRange);
 	GetStatLine(flags, &len, 1746, f0fmt, 1760, countermeasuredropper->fMuzzleVelocity);
 	GetStatLine(flags, &len, 1747, f2fmt, 459534, (1.0f / countermeasuredropper->fRefireDelay));
-	GetStatLine(flags, &len, 1748, f0fmt, 0, countermeasuredropper->fPowerUsage);
+	GetStatLine(flags, &len, 459522, f0fmtv, 0, countermeasuredropper->fPowerUsage, (countermeasuredropper->fPowerUsage * (1.0f / countermeasuredropper->fRefireDelay)));
 	return len;
 }
 
