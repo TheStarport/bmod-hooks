@@ -159,10 +159,10 @@ PBYTE gunHpTypeCountMemory = static_cast<PBYTE>(malloc(5));
 PBYTE shieldHpTypeCountMemory = static_cast<PBYTE>(malloc(5));
 using GetHpTypeByIndexT = uint(*__fastcall)(Archetype::Equipment* equip, void* edx, uint index);
 using GetHpTypeCountT = uint(*__fastcall)(Archetype::Equipment* equip);
-GetHpTypeCountT getGunHpTypeCount = reinterpret_cast<GetHpTypeCountT>(GetProcAddress(GetModuleHandle("common.dll"), "?get_number_of_hp_types@Gun@Archetype@@QBEHXZ"));
-GetHpTypeCountT getShieldHpTypeCount = reinterpret_cast<GetHpTypeCountT>(GetProcAddress(GetModuleHandle("common.dll"), "?get_number_of_hp_types@ShieldGenerator@Archetype@@QBEHXZ"));
-GetHpTypeByIndexT getGunHpTypeByIndex = reinterpret_cast<GetHpTypeByIndexT>(GetProcAddress(GetModuleHandle("common.dll"), "?get_hp_type_by_index@Gun@Archetype@@QBE?AW4HpAttachmentType@@H@Z"));
-GetHpTypeByIndexT getShieldHpTypeByIndex = reinterpret_cast<GetHpTypeByIndexT>(GetProcAddress(GetModuleHandle("common.dll"), "?get_hp_type_by_index@ShieldGenerator@Archetype@@QBE?AW4HpAttachmentType@@H@Z"));
+GetHpTypeCountT getGunHpTypeCount = reinterpret_cast<GetHpTypeCountT>(GetProcAddress(GetModuleHandleA("common.dll"), "?get_number_of_hp_types@Gun@Archetype@@QBEHXZ"));
+GetHpTypeCountT getShieldHpTypeCount = reinterpret_cast<GetHpTypeCountT>(GetProcAddress(GetModuleHandleA("common.dll"), "?get_number_of_hp_types@ShieldGenerator@Archetype@@QBEHXZ"));
+GetHpTypeByIndexT getGunHpTypeByIndex = reinterpret_cast<GetHpTypeByIndexT>(GetProcAddress(GetModuleHandleA("common.dll"), "?get_hp_type_by_index@Gun@Archetype@@QBE?AW4HpAttachmentType@@H@Z"));
+GetHpTypeByIndexT getShieldHpTypeByIndex = reinterpret_cast<GetHpTypeByIndexT>(GetProcAddress(GetModuleHandleA("common.dll"), "?get_hp_type_by_index@ShieldGenerator@Archetype@@QBE?AW4HpAttachmentType@@H@Z"));
 
 uint GetCustomHpByIndex(const uint itemHash, const uint index)
 {
@@ -945,7 +945,7 @@ void SetupClassExpansion()
 {
 	ReadEquipmentClassMods();
 
-	auto common = (DWORD)GetModuleHandle("common.dll");
+	auto common = (DWORD)GetModuleHandleA("common.dll");
 	hpTableOffset += common;
 
 	gunReadReplacementOffset += common;

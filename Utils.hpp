@@ -76,7 +76,8 @@ namespace Utils
 		FARPROC PatchCallAddr(char* hMod, DWORD dwInstallAddress, char* dwHookFunction);
 		typedef void* (*RTDynamicCast)(void*, long, void*, void*, int);
 		inline RTDynamicCast dynCast = RTDynamicCast(GetProcAddress(GetModuleHandle(L"msvcrt.dll"), "__RTDynamicCast"));
-		
+		std::string GetCurrentExe();
+
 		// Detour
 		void Detour(unsigned char* pOFunc, void* pHkFunc, unsigned char* originalData);
 		void* DetourLength(BYTE* src, const BYTE* dst, const int len);

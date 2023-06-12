@@ -215,7 +215,7 @@ void InitBurstMod()
 	}
 
 	ceGunFireData = PBYTE(malloc(5));
-	ceGunFirePtr = CEFireType(GetProcAddress(GetModuleHandle("common.dll"), "?Fire@CEGun@@UAE?AW4FireResult@@ABVVector@@@Z"));
+	ceGunFirePtr = CEFireType(GetProcAddress(GetModuleHandleA("common.dll"), "?Fire@CEGun@@UAE?AW4FireResult@@ABVVector@@@Z"));
 	Utils::Memory::Detour(PBYTE(ceGunFirePtr), CEGunFireDetour, ceGunFireData);
 
 	unkData = PBYTE(malloc(5));

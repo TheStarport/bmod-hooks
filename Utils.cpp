@@ -287,6 +287,23 @@ namespace Utils
 
 	namespace Memory
 	{
+		std::string GetCurrentExe()
+		{
+			char filename[MAX_PATH];
+			DWORD size = GetModuleFileNameA(NULL, filename, MAX_PATH);
+			if (!size) {
+				return "";
+			}
+
+			//Remove everything before the last "\"
+			std::string name = filename;
+			if (const auto it = std::find(name.rbegin(), name.rend(), '\\'); it != name.rend())
+			{
+				name.erase(name.begin(), it.base());
+			}
+
+			return name;
+		}
 		FARPROC PatchCallAddr(char* hMod, DWORD dwInstallAddress, char* dwHookFunction)
 		{
 			DWORD dwRelAddr;
@@ -583,15 +600,15 @@ namespace Utils
 	{
 		// If any of the strings contains the target substring, return the first one.
 		const auto itr = std::find_if(this->tokens.begin(), this->tokens.end(), [option](const std::wstring& str)
-		{
-			return str.find(option) != std::wstring::npos;
-		});
-		
-		if (itr != this->tokens.end() && itr->find('=') != std::wstring::npos) 
+			{
+				return str.find(option) != std::wstring::npos;
+			});
+
+		if (itr != this->tokens.end() && itr->find('=') != std::wstring::npos)
 		{
 			return itr->substr(itr->find('=') + 1);
 		}
-		else 
+		else
 		{
 			static const std::wstring empty_string;
 			return empty_string;
