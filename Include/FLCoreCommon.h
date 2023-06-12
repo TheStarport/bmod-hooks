@@ -723,7 +723,7 @@ namespace Archetype
 	public:
 		/* 32 */ float fLinearDrag;
 		/* 33 */ float fRange;
-		/* 34 */ float fDiversionPctg;
+		/* 34 */ int fDiversionPctg;
 	};
 
 	struct IMPORT CounterMeasureDropper : Launcher
