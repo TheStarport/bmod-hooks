@@ -45,7 +45,7 @@ void SetupHack()
 	Utils::Memory::Detour((unsigned char*)globalTimingFunction, Update, data);
 
 	SetupClassExpansion();
-
+	InitInfocardEdits();
 	FreelancerOnlyHacks();
 }
 

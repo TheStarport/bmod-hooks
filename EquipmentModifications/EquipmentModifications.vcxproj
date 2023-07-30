@@ -157,6 +157,7 @@
     <ClCompile Include="BurstFire.cpp" />
     <ClCompile Include="ClassExpansion.cpp" />
     <ClCompile Include="CustomClassNames.cpp" />
+    <ClCompile Include="InfocardOverride.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
