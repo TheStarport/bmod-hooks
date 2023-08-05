@@ -204,11 +204,68 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 		int mediumBallisticCount = 0;
 		int largeBallisticCount = 0;
 
+		int smallFleetEnergyCount = 0;
+		int mediumFleetEnergyCount = 0;
+		int largeFleetEnergyCount = 0;
+
+		int smallFleetMissileCount = 0;
+		int mediumFleetMissileCount = 0;
+		int largeFleetMissileCount = 0;
+
+		int smallFleetBallisticCount = 0;
+		int mediumFleetBallisticCount = 0;
+		int pointDefenseCount = 0;
+
 #define FindHp(id) std::ranges::find(hp.second, (id)) != hp.second.end()
+
+		std::function<bool(std::pair<const std::string, std::vector<HpAttachmentType>>&, std::vector<std::pair<HpAttachmentType, int&>>&, int index)> matchGroup;
+		matchGroup = [&matchGroup](std::pair<const std::string, std::vector<HpAttachmentType>>& hp, std::vector<std::pair<HpAttachmentType, int&>>& pairs, int index = 0)
+		{
+			if (pairs.size() <= index)
+			{
+				return false;
+			}
+
+			auto& pair = pairs[index];
+			if (FindHp(pair.first))
+			{
+				if (matchGroup(hp, pairs, index + 1))
+				{	
+					return false;
+				}
+
+				pair.second++;
+				return true;
+			}
+			return false;
+		};
+
+		std::vector<std::pair<HpAttachmentType, int&>> energy =
+		{
+			{ hp_gun_special_1, smallEnergyCount },
+			{ hp_gun_special_2, mediumEnergyCount },
+			{ hp_gun_special_3, largeEnergyCount },
+		};
+
+		std::vector<std::pair<HpAttachmentType, int&>> missiles =
+		{
+			{ hp_gun_special_4, smallMissileCount },
+			{ hp_gun_special_5, mediumMissileCount },
+			{ hp_gun_special_6, largeMissileCount },
+		};
+		std::vector<std::pair<HpAttachmentType, int&>> ballistic =
+		{
+			{ hp_gun_special_7, smallBallisticCount },
+			{ hp_gun_special_8, mediumBallisticCount },
+			{ hp_gun_special_9, largeBallisticCount },
+		};
 
 		for (auto& hp : hardpointToHpType)
 		{
-			if (FindHp(hp_gun_special_1)) 
+			matchGroup(hp, energy, 0);
+			matchGroup(hp, missiles, 0);
+			matchGroup(hp, ballistic, 0);
+			/*if (FindHp(hp_gun_special_1)) 
 			{
 				if (FindHp(hp_gun_special_2)) 
 				{
@@ -253,24 +310,54 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 				smallBallisticCount++;
 				continue;
 			}
+			else if (FindHp(hp_turret_special_1))
+			{
+				if (FindHp(hp_turret_special_2))
+				{
+					if (FindHp(hp_turret_special_3))
+					{
+						largeFleetEnergyCount++;
+						continue;
+					}
+					mediumFleetEnergyCount++;
+					continue;
+				}
+				smallFleetEnergyCount++;
+				continue;
+			}
+			else if (FindHp(hp_turret_special_4))
+			{
+				if (FindHp(hp_turret_special_5))
+				{
+					if (FindHp(hp_turret_special_6))
+					{
+						largeFleetMissileCount++;
+						continue;
+					}
+					mediumFleetMissileCount++;
+					continue;
+				}
+				smallFleetMissileCount++;
+				continue;
+			}
+			else if (FindHp(hp_turret_special_7))
+			{
+				if (FindHp(hp_turret_special_8))
+				{
+					mediumFleetBallisticCount++;
+					continue;
+				}
+				smallFleetBallisticCount++;
+				continue;
+			}
+			else if (FindHp(hp_turret_special_9))
+			{
+				pointDefenseCount++;
+				continue;
+			}*/
 		}
 
 #undef FindHp
-
-		//	hp_gun_special_1 = S Energy
-		//	hp_gun_special_2 = M Energy
-		//	hp_gun_special_3 = L Energy
-		//	hp_gun_special_4 = S Missile
-		//	hp_gun_special_5 = M Missile
-		//	hp_gun_special_6 = L Missile
-		//	hp_gun_special_7 = S Ballistic
-		//	hp_gun_special_8 = M Ballistic
-		//	hp_gun_special_9 = L Ballistic
-		//	hp_fighter_shield_special_10 = Targeter
-		//	hp_fighter_shield_special_2 = LF Shield
-		//	hp_elite_shield_special_2 = HF Shield
-		//	hp_elite_shield_special_5 = VHF Shield
-
 		// x = class
 		// y = hardpoint
 		// for each item in list
@@ -300,6 +387,16 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 		appendEquipment(smallBallisticCount, L"SB");
 		appendEquipment(mediumBallisticCount, L"MB");
 		appendEquipment(largeBallisticCount, L"LB");
+
+		appendEquipment(smallFleetEnergyCount, L"STE");
+		appendEquipment(mediumFleetEnergyCount, L"MTE");
+		appendEquipment(largeFleetEnergyCount, L"LTE");
+		appendEquipment(smallFleetMissileCount, L"STM");
+		appendEquipment(mediumFleetMissileCount, L"MTM");
+		appendEquipment(largeFleetMissileCount, L"LTM");
+		appendEquipment(smallFleetBallisticCount, L"STB");
+		appendEquipment(mediumFleetBallisticCount, L"MTB");
+		appendEquipment(pointDefenseCount, L"PD");
 
 		if (!equipment.empty())
 		{
