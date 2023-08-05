@@ -1,5 +1,126 @@
 #include "Main.hpp"
 
+int __fastcall GetIDS(Archetype::Equipment* object, CEquip* item)
+{
+	if (CEGun::cast(item))
+	{
+		CEGun* gun = (CEGun*)item;
+		return gun->MunitionArch()->iIdsName;
+	}
+
+	else if (CEMineDropper::cast(item))
+	{
+		CEMineDropper* mine = (CEMineDropper*)item;
+		return mine->MineArch()->iIdsName;
+	}
+
+	else if (CECounterMeasureDropper::cast(item))
+	{
+		CECounterMeasureDropper* cm = (CECounterMeasureDropper*)item;
+		return cm->CounterMeasureArch()->iIdsName;
+	}
+
+	return (object->iIdsName); // original IDS
+}
+
+DWORD idsJump = 0x004DDB05;
+__declspec(naked) void PatchIDS(void)
+{
+	__asm {
+		pushad
+		mov ecx, eax
+		mov edx, esi
+		call GetIDS
+		mov edi, eax
+		popad
+		mov ecx, esi
+		jmp[idsJump]
+	}
+}
+
+constexpr uint ShipOverrideIDS = 459593;
+#define ShipWeaponInfoIDS 459592
+Archetype::Ship* curShip = nullptr;
+int __fastcall GetShipIDS(Archetype::Ship* ship)
+{
+	curShip = ship;
+	return ShipOverrideIDS; // Some arbitrary value I copied. Defaults to the patriot information.
+}
+
+DWORD idsShipJump = 0x47BD44;
+static bool isInventory = false;
+__declspec(naked) void PatchShipInfoInventoryIDS(void)
+{
+	__asm {
+		mov eax, [ebp + 0x0EC]
+		mov edx, [ebp + 0x014]
+		mov ecx, [ebp + 0x018]
+		push esi
+		push eax
+		push edi
+		push ecx
+		push edx
+		push ebp
+		mov  ecx, ebp
+		mov  isInventory, 1
+		call GetShipIDS
+		pop ebp
+		pop edx
+		pop ecx
+		pop edi
+		mov ecx, eax
+		pop eax
+		pop esi
+		jmp[idsShipJump]
+	}
+}
+
+DWORD idsShipJump2 = 0x4B8C12;
+__declspec(naked) void PatchShipInfoSellerIDS(void)
+{
+	__asm {
+		mov ecx, [edi + 0x0F0]
+		mov edx, [edi + 0x0F4]
+		mov ebp, [edi + 0x0EC]
+		push esi
+		push eax
+		push edi
+		push ecx
+		push edx
+		push ebp
+		mov  ecx, edi
+		mov  isInventory, 0
+		call GetShipIDS
+		pop ebp
+		pop edx
+		pop ecx
+		pop edi
+		mov edx, eax
+		pop eax
+		pop esi
+		jmp[idsShipJump2]
+	}
+}
+
+void IdsPatch()
+{
+#define ADDR_IDS    ((PBYTE)0x4ddb00)
+#define ADDR_IDS_SHIP_SELLER   ((PBYTE)0x4B8C00)
+#define ADDR_IDS_SHIP_INVENTORY   ((PBYTE)0x47BD38)
+
+	ProtectExecuteReadWrite(ADDR_IDS, 5);
+	ADDR_IDS[0] = 0xe9;
+	*(DWORD*)(ADDR_IDS + 1) = (PBYTE)PatchIDS - ADDR_IDS - 5;
+
+	ProtectExecuteReadWrite(ADDR_IDS_SHIP_SELLER, 5);
+	ADDR_IDS_SHIP_SELLER[0] = 0xe9;
+	*(DWORD*)(ADDR_IDS_SHIP_SELLER + 1) = (PBYTE)PatchShipInfoSellerIDS - ADDR_IDS_SHIP_SELLER - 5;
+
+	ProtectExecuteReadWrite(ADDR_IDS_SHIP_INVENTORY, 5);
+	ADDR_IDS_SHIP_INVENTORY[0] = 0xe9;
+	*(DWORD*)(ADDR_IDS_SHIP_INVENTORY + 1) = (PBYTE)PatchShipInfoInventoryIDS - ADDR_IDS_SHIP_INVENTORY - 5;
+}
+
 float RadiansToDegrees(float rad)
 {
 	constexpr float ratio = 180.0f / 3.1415926f;
@@ -20,97 +141,92 @@ float GetTurnRate(float torque, float angularDrag, float rotationalInertia)
 	return angularVelocityWithRespectToTime;
 }
 
-std::wstring& GetShipInfo(Archetype::Ship* ship) {
-	static std::wstring ret;
-	ret += L"<RDL><PUSH/><PARA/> <JUST loc=\"c\"/><TRA bold=\"true\"/><TEXT>Stats</TEXT><TRA bold=\"false\"/><PARA/><JUST loc=\"l\"/><PARA/>";
-	//ret += L"<TEXT>Hardpoints: 2x ME, 2x SE / B, 2x SM, 1x MM, 1xLB</TEXT><PARA/>";
-	//ret += L"<TEXT>Additional Equipment: CD, CM, Mine Dropper</TEXT><PARA/>";
-	ret += std::format(L"<TEXT>Mass: {:.0f}t</TEXT><PARA/>", ship->fMass);
-	ret += std::format(L"<TEXT>Armor: {:.0f}</TEXT> <PARA/>", ship->fHitPoints);
-	ret += std::format(L"<TEXT>Cargo Space: {:.0f}t</TEXT><PARA/>", ship->fHoldSize);
-	ret += std::format(L"<TEXT>Pitch/Yaw/Roll Rate: {:.1f}°/{:.1f}°/{:.1f}°/s</TEXT><PARA/>", RadiansToDegrees(GetTurnRate(ship->fSteeringTorque[0], ship->fAngularDrag[0], ship->fRotationInertia[0])), RadiansToDegrees(GetTurnRate(ship->fSteeringTorque[1], ship->fAngularDrag[1], ship->fRotationInertia[1])), RadiansToDegrees(GetTurnRate(ship->fSteeringTorque[2], ship->fAngularDrag[2], ship->fRotationInertia[2])));
-	ret += std::format(L"<TEXT>Angular Drag: {:.0f}N</TEXT><PARA/>", ship->fAngularDrag[0]);
-	ret += std::format(L"<POP/></RDL>");
-	return ret;
-}
-
-std::wstring& PrintCardTemplate(Archetype::Ship* ship) {
-	static std::wstring ret;
-	ret += std::format(L"<RDL><PUSH/><TRA bold=\"true\"/><TEXT>Stats</TEXT><TRA bold=\"false\"/><PARA/><PARA/><TEXT>Hardpoints:</TEXT><PARA/>");
-	//ret += std::format(L"<TEXT>Additional Equipment:</TEXT><PARA/>");
-	//ret += std::format(L"<TEXT>Mass:</TEXT><PARA/>");
-	ret += std::format(L"<TEXT>Armor:</TEXT><PARA/>");
-	ret += std::format(L"<TEXT>Cargo Space:</TEXT><PARA/>");
-	ret += std::format(L"<TEXT>Pitch/Yaw/Roll Rate:</TEXT><PARA/>");
-	ret += std::format(L"<TEXT>Angular Drag:</TEXT><PARA/>");
-	ret += std::format(L"<POP/></RDL>");
-	return ret;
-}
-
-std::wstring& PrintCardContents(Archetype::Ship* ship) {
-	static std::wstring ret;
-	ret += std::format(L"<RDL><PUSH/><PARA/><PARA/>");
-	//ret += std::format(L"<TEXT>2x ME, 2x SE/B, 2x SM, 1x MM, 1xLB</TEXT><PARA/>");
-	//ret += std::format(L"<TEXT>CD, CM, Mine Dropper</TEXT><PARA/>");
-	ret += std::format(L"<TEXT>{:.0f}t</TEXT><PARA/>", ship->fMass);
-	ret += std::format(L"<TEXT>{:.0f}</TEXT><PARA/>", ship->fHitPoints);
-	ret += std::format(L"<TEXT>{:.0f}t</TEXT><PARA/>", ship->fHoldSize);
-	ret += std::format(L"<TEXT>{:.1f}°/{:.1f}°/{:.1f}°/sec</TEXT><PARA/>", RadiansToDegrees(GetTurnRate(ship->fSteeringTorque[0], ship->fAngularDrag[0], ship->fRotationInertia[0])), RadiansToDegrees(GetTurnRate(ship->fSteeringTorque[1], ship->fAngularDrag[1], ship->fRotationInertia[1])), RadiansToDegrees(GetTurnRate(ship->fSteeringTorque[2], ship->fAngularDrag[2], ship->fRotationInertia[2])));
-	ret += std::format(L"<TEXT>{:.0f}N</TEXT><PARA/>", ship->fAngularDrag[0]);
-	ret += std::format(L"<POP/></RDL>");
-	return ret;
-}
-
-/// Return the infocard text or 0 if custom infocard does not exist.
-static const wchar_t* GetCustomIDS(uint ids_number)
+bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 {
-	if (ids_number == 459591) {
-		return GetShipInfo(Utils::GetShipArch()).c_str();
-	}
-	/*if (ids_number == 459592) {
-		return PrintCardTemplate(Utils::GetShipArch()).c_str();
-	}
-	if (ids_number == 459593) {
-		return PrintCardContents(Utils::GetShipArch()).c_str();
-	}*/
-	return 0;
-}
-
-/// Override ID strings.
-static int GetIDSStringResult;
-int __stdcall HkCb_GetIDSString(int rsrc, unsigned int ids_number, wchar_t* buf, unsigned int buf_size)
-{
-	const wchar_t* text = GetCustomIDS(ids_number);
-	if (text)
+	if (!curShip)
 	{
-		//AddLog(L"Overriding infocard: %d [%s]\n", ids_number, text);    
-		size_t num_chars = wcslen(text);
-		wcsncpy(buf, text, buf_size);
-		buf[buf_size - 1] = 0;
-		return num_chars;
+		curShip = Utils::GetShipArch();
 	}
-	return 0;
-}
 
-/// Naked function hook for the infoname/infocard function.
-__declspec(naked) void HkCb_GetIDSStringNaked()
-{
-	__asm {
-		push[esp + 16]
-		push[esp + 16]
-		push[esp + 16]
-		push[esp + 16]
-		call HkCb_GetIDSString
-		cmp eax, 0
-		jnz done
+	if (ids == ShipOverrideIDS)
+	{
+		std::wostringstream ss;
+		ss << std::fixed; // Don't use e notation
 
-		mov eax, [esp + 8]
-		mov ecx, [esp + 4]
-		push ebx
-		push 0x4347E9
-		done:
-		ret
+		ss << LR"(<?xml version="1.0" encoding="UTF-16"?><RDL><PUSH/><TRA data="1" mask="1" def="-2"/><RDL><PUSH/><PARA/><TRA bold="false"/>)";
+
+		Vector turnRate =
+		{
+			RadiansToDegrees(GetTurnRate(curShip->fSteeringTorque[0], curShip->fAngularDrag[0], curShip->fRotationInertia[0])),
+			RadiansToDegrees(GetTurnRate(curShip->fSteeringTorque[1], curShip->fAngularDrag[1], curShip->fRotationInertia[1])),
+			RadiansToDegrees(GetTurnRate(curShip->fSteeringTorque[2], curShip->fAngularDrag[2], curShip->fRotationInertia[2])),
+		};
+
+		std::map<HpAttachmentType, std::vector<CacheString>> hardpoints;
+
+		for (auto hpType : curShip->vHardpoints)
+		{
+			auto hps = curShip->get_legal_hps(hpType);
+			if (!hps)
+			{
+				continue;
+			}
+
+			hardpoints[hpType] = *hps;
+		}
+
+
+		// x = class
+		// y = hardpoint
+		// for each item in list
+		// if y found in other class
+		// remove y from old list and store y in new list
+
+		// list A = all hardpoints with multi-types removed
+		// list B = all hardpoints that can mount multi-types
+
+		if (isInventory)
+		{
+
+			ss << L"<JUST loc=\"c\"/><TRA bold=\"true\"/><TEXT>Stats</TEXT><TRA bold=\"false\"/><PARA/><JUST loc=\"l\"/><PARA/>"
+				<< L"<TEXT>Mass: " << std::setprecision(0) << curShip->fMass << L"t</TEXT><PARA/>"
+				<< L"<TEXT>Armor: " << curShip->fHitPoints << L"</TEXT><PARA/>"
+				<< L"<TEXT>Cargo Space: " << curShip->fHoldSize << L"t</TEXT><PARA/>"
+				<< L"<TEXT>Turn Rate: " << std::setprecision(1) << turnRate.x << L"°/s</TEXT><PARA/>";
+		}
+		else
+		{
+			ss << L"<PARA/><TEXT>" << static_cast<int>(curShip->fMass) << L"t</TEXT><PARA/>"
+				<< L"<TEXT>" << static_cast<int>(curShip->fHitPoints) << L"</TEXT><PARA/>"
+				<< L"<TEXT>" << static_cast<int>(curShip->fHoldSize) << L"</TEXT><PARA/>"
+				<< L"<TEXT>" << std::setprecision(1) << turnRate.x << L"°/s</TEXT><PARA/>";
+		}
+
+		ss << L"<PARA/><POP/></RDL>";
+		XMLReader reader;
+		reader.read_buffer(rdl, reinterpret_cast<const char*>(ss.str().c_str()), wcslen(ss.str().c_str()) * 2);
+
+		return true;
 	}
+	else if (ids == ShipWeaponInfoIDS)
+	{
+		static std::wstring ret;
+		if (ret.empty())
+		{
+			ret += std::format(L"<RDL><PUSH/><TRA bold=\"true\"/><TEXT>Stats</TEXT><TRA bold=\"false\"/><PARA/><PARA/>");
+			ret += std::format(L"<TEXT>Mass:</TEXT><PARA/>");
+			ret += std::format(L"<TEXT>Armor:</TEXT><PARA/>");
+			ret += std::format(L"<TEXT>Cargo Space:</TEXT><PARA/>");
+			ret += std::format(L"<TEXT>Turn Rate</TEXT><PARA/><POP/></RDL>");
+		}
+
+		XMLReader reader;
+		reader.read_buffer(rdl, reinterpret_cast<const char*>(ret.c_str()), wcslen(ret.c_str()) * 2);
+		return true;
+
+	}
+
+	return false;
 }
 
 typedef int(__cdecl* _GetString)(char* rsrc, uint ids, wchar_t* buf, int buf_chars);
@@ -122,16 +238,9 @@ extern _FormatXML FormatXML = (_FormatXML)0x57DB50;
 /// Return true if we override the default infocard
 bool __stdcall HkCb_GetInfocard(unsigned int ids_number, RenderDisplayList& rdl)
 {
-	const wchar_t* text = GetCustomIDS(ids_number);
-	if (text)
+	bool handled = HandleShipInfocard(ids_number, rdl);
+	if (handled)
 	{
-		// AddLog(L"Overriding infocard: %d [%s]\n", ids_number, text);    
-		XMLReader reader;
-		size_t num_chars = wcslen(text);
-		if (!reader.read_buffer(rdl, (const char*)text, num_chars * 2))
-		{
-			FormatXML(text, num_chars, rdl, 1);
-		}
 		return true;
 	}
 
@@ -158,14 +267,7 @@ __declspec(naked) void HkCb_GetInfocardNaked()
 
 void InitInfocardEdits()
 {
-
-	// Patch get ids string
-	{
-		BYTE patch2[] = { 0xB9, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xE1, 0x90 }; // mov ecx HkCb_GetIDSStringNaked, jmp ecx
-		DWORD* iAddr = (DWORD*)((char*)&patch2 + 1);
-		*iAddr = reinterpret_cast<DWORD>((void*)HkCb_GetIDSStringNaked);
-		Utils::Memory::WriteProcMem((char*)0x4347E0, &patch2, 8);
-	}
+	IdsPatch();
 
 	// Patch get infocard
 	{
