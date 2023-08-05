@@ -175,6 +175,101 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 			hardpoints[hpType] = *hps;
 		}
 
+		std::map<std::string, std::vector<HpAttachmentType>> hardpointToHpType;
+		for (auto& type : hardpoints) 
+		{
+			for (auto& hardpoint : type.second)
+			{
+				std::string hp = hardpoint.value;
+				auto ref = hardpointToHpType.find(hp);
+				if (ref == hardpointToHpType.end())
+				{
+					(hardpointToHpType[hp] = {});
+					ref = hardpointToHpType.find(hp);
+				}
+
+				ref->second.emplace_back(type.first);
+			}
+		}
+
+		int smallEnergyCount = 0;
+		int mediumEnergyCount = 0;
+		int largeEnergyCount = 0;
+
+		int smallMissileCount = 0;
+		int mediumMissileCount = 0;
+		int largeMissileCount = 0;
+
+		int smallBallisticCount = 0;
+		int mediumBallisticCount = 0;
+		int largeBallisticCount = 0;
+
+#define FindHp(id) std::ranges::find(hp.second, (id)) != hp.second.end()
+
+		for (auto& hp : hardpointToHpType)
+		{
+			if (FindHp(hp_gun_special_1)) 
+			{
+				if (FindHp(hp_gun_special_2)) 
+				{
+					if (FindHp(hp_gun_special_3)) 
+					{
+						largeEnergyCount++;
+						continue;
+					}
+					mediumEnergyCount++;
+					continue;
+				}
+				smallEnergyCount++;
+				continue;
+			}
+			else if (FindHp(hp_gun_special_4))
+			{
+				if (FindHp(hp_gun_special_5))
+				{
+					if (FindHp(hp_gun_special_6))
+					{
+						largeMissileCount++;
+						continue;
+					}
+					mediumMissileCount++;
+					continue;
+				}
+				smallMissileCount++;
+				continue;				
+			}
+			else if (FindHp(hp_gun_special_7))
+			{
+				if (FindHp(hp_gun_special_8))
+				{
+					if (FindHp(hp_gun_special_9))
+					{
+						largeBallisticCount++;
+						continue;
+					}
+					mediumBallisticCount++;
+					continue;
+				}
+				smallBallisticCount++;
+				continue;
+			}
+		}
+
+#undef FindHp
+
+		//	hp_gun_special_1 = S Energy
+		//	hp_gun_special_2 = M Energy
+		//	hp_gun_special_3 = L Energy
+		//	hp_gun_special_4 = S Missile
+		//	hp_gun_special_5 = M Missile
+		//	hp_gun_special_6 = L Missile
+		//	hp_gun_special_7 = S Ballistic
+		//	hp_gun_special_8 = M Ballistic
+		//	hp_gun_special_9 = L Ballistic
+		//	hp_fighter_shield_special_10 = Targeter
+		//	hp_fighter_shield_special_2 = LF Shield
+		//	hp_elite_shield_special_2 = HF Shield
+		//	hp_elite_shield_special_5 = VHF Shield
 
 		// x = class
 		// y = hardpoint
@@ -185,21 +280,57 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 		// list A = all hardpoints with multi-types removed
 		// list B = all hardpoints that can mount multi-types
 
+		std::wstring equipment = L"";
+		// Weapons: 2x ME, 2x SM, 1x MM, 1xLB
+
+		auto appendEquipment = [&equipment](int count, std::wstring prefix)
+		{
+			if (count) 
+			{
+				equipment += std::format(L"{}x{}, ", count, prefix);
+			}
+		};
+
+		appendEquipment(smallEnergyCount, L"SE");
+		appendEquipment(mediumEnergyCount, L"ME");
+		appendEquipment(largeEnergyCount, L"LE");
+		appendEquipment(smallMissileCount, L"SM");
+		appendEquipment(mediumMissileCount, L"MM");
+		appendEquipment(largeMissileCount, L"LM");
+		appendEquipment(smallBallisticCount, L"SB");
+		appendEquipment(mediumBallisticCount, L"MB");
+		appendEquipment(largeBallisticCount, L"LB");
+
+		if (!equipment.empty())
+		{
+			auto back = equipment.back();
+			if (back == L' ') 
+			{
+				equipment = equipment.substr(0, equipment.size() - 2);
+			}
+		}
+
+
 		if (isInventory)
 		{
 
 			ss << L"<JUST loc=\"c\"/><TRA bold=\"true\"/><TEXT>Stats</TEXT><TRA bold=\"false\"/><PARA/><JUST loc=\"l\"/><PARA/>"
 				<< L"<TEXT>Mass: " << std::setprecision(0) << curShip->fMass << L"t</TEXT><PARA/>"
 				<< L"<TEXT>Armor: " << curShip->fHitPoints << L"</TEXT><PARA/>"
-				<< L"<TEXT>Cargo Space: " << curShip->fHoldSize << L"t</TEXT><PARA/>"
+				<< L"<TEXT>Cargo Space: " << curShip->fHoldSize << L"m³</TEXT><PARA/>"
 				<< L"<TEXT>Turn Rate: " << std::setprecision(1) << turnRate.x << L"°/s</TEXT><PARA/>";
+				if (!equipment.empty())
+				{
+					ss << L"<TEXT>Hardpoints: </TEXT><TRA data=\"0xE7C68490\" mask=\"-1\"/><TEXT>" << equipment << L"</TEXT><PARA/>";
+				}
 		}
 		else
 		{
 			ss << L"<PARA/><TEXT>" << static_cast<int>(curShip->fMass) << L"t</TEXT><PARA/>"
 				<< L"<TEXT>" << static_cast<int>(curShip->fHitPoints) << L"</TEXT><PARA/>"
-				<< L"<TEXT>" << static_cast<int>(curShip->fHoldSize) << L"</TEXT><PARA/>"
-				<< L"<TEXT>" << std::setprecision(1) << turnRate.x << L"°/s</TEXT><PARA/>";
+				<< L"<TEXT>" << static_cast<int>(curShip->fHoldSize) << L"m³</TEXT><PARA/>"
+				<< L"<TEXT>" << std::setprecision(1) << turnRate.x << L"°/s</TEXT><PARA/>"
+				<< L"<TRA data=\"0xE7C68490\" mask=\"-1\"/><TEXT>" << equipment << L"</TEXT><PARA/>";
 		}
 
 		ss << L"<PARA/><POP/></RDL>";
@@ -217,7 +348,9 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 			ret += std::format(L"<TEXT>Mass:</TEXT><PARA/>");
 			ret += std::format(L"<TEXT>Armor:</TEXT><PARA/>");
 			ret += std::format(L"<TEXT>Cargo Space:</TEXT><PARA/>");
-			ret += std::format(L"<TEXT>Turn Rate</TEXT><PARA/><POP/></RDL>");
+			ret += std::format(L"<TEXT>Turn Rate:</TEXT><PARA/>");
+			ret += std::format(L"<TEXT>Hardpoints:</TEXT><PARA/>");
+			ret += L"<POP/></RDL>";
 		}
 
 		XMLReader reader;
