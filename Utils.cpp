@@ -564,8 +564,9 @@ namespace Utils
 
 	Archetype::Ship* GetShipArch()
 	{
-		uint* shipId = (uint*)0x67337C;
-		return Archetype::GetShip(*shipId);
+		uint shipId = *(uint*)0x67337C;
+		if (!shipId) { return nullptr; }
+		return Archetype::GetShip(shipId);
 	}
 
 	__declspec(naked) CShip* GetCShip()

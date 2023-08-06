@@ -140,6 +140,7 @@ void IdsPatch()
 	ProtectExecuteReadWrite(ADDR_IDS, 5);
 	ADDR_IDS[0] = 0xe9;
 	*(DWORD*)(ADDR_IDS + 1) = (PBYTE)PatchIDS - ADDR_IDS - 5;
+	//Above code seems to be responsible for lack of weapon list text in space
 
 	ProtectExecuteReadWrite(ADDR_IDS_SHIP_SELLER, 5);
 	ADDR_IDS_SHIP_SELLER[0] = 0xe9;
@@ -174,7 +175,7 @@ float GetTurnRate(float torque, float angularDrag, float rotationalInertia)
 	return angularVelocityWithRespectToTime;
 }
 
-bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
+bool __stdcall HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 {
 	if (!curShip)
 	{
@@ -550,7 +551,7 @@ void InitInfocardEdits()
 {
 	IdsPatch();
 
-	// Patch get infocard
+	// Patch get infocard: This function generates a ton of spew in the menu!
 	{
 		BYTE patch[] = { 0xB9, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xE1 }; // mov ecx HkCb_GetInfocardNaked, jmp ecx
 		DWORD* iAddr = (DWORD*)((char*)&patch + 1);
