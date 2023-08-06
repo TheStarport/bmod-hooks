@@ -102,10 +102,39 @@ __declspec(naked) void PatchShipInfoSellerIDS(void)
 	}
 }
 
+DWORD idsShipJump3 = 0x4B8FFD;
+__declspec(naked) void PatchShipInfoSellerYourShipIds()
+{
+	__asm
+	{
+		mov ecx, [edi + 0x0F0]
+		mov edx, [edi + 0x0F4]
+		mov ebp, [edi + 0x0EC]
+		push esi
+		push eax
+		push edi
+		push ecx
+		push edx
+		push ebp
+		mov  ecx, edi
+		mov  isInventory, 0
+		call GetShipIDS
+		pop ebp
+		pop edx
+		pop ecx
+		pop edi
+		mov edx, eax
+		pop eax
+		pop esi
+		jmp[idsShipJump3]
+	}
+}
+
 void IdsPatch()
 {
 #define ADDR_IDS    ((PBYTE)0x4ddb00)
 #define ADDR_IDS_SHIP_SELLER   ((PBYTE)0x4B8C00)
+#define ADDR_IDS_SHIP_SELLER_YOUR_SHIP   ((PBYTE)0x4B8FEB)
 #define ADDR_IDS_SHIP_INVENTORY   ((PBYTE)0x47BD38)
 
 	ProtectExecuteReadWrite(ADDR_IDS, 5);
@@ -115,6 +144,10 @@ void IdsPatch()
 	ProtectExecuteReadWrite(ADDR_IDS_SHIP_SELLER, 5);
 	ADDR_IDS_SHIP_SELLER[0] = 0xe9;
 	*(DWORD*)(ADDR_IDS_SHIP_SELLER + 1) = (PBYTE)PatchShipInfoSellerIDS - ADDR_IDS_SHIP_SELLER - 5;
+
+	ProtectExecuteReadWrite(ADDR_IDS_SHIP_SELLER_YOUR_SHIP, 5);
+	ADDR_IDS_SHIP_SELLER_YOUR_SHIP[0] = 0xe9;
+	*(DWORD*)(ADDR_IDS_SHIP_SELLER_YOUR_SHIP + 1) = (PBYTE)PatchShipInfoSellerYourShipIds - ADDR_IDS_SHIP_SELLER_YOUR_SHIP - 5;
 
 	ProtectExecuteReadWrite(ADDR_IDS_SHIP_INVENTORY, 5);
 	ADDR_IDS_SHIP_INVENTORY[0] = 0xe9;
