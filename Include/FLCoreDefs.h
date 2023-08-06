@@ -97,5 +97,7 @@ using ushort = unsigned short;
 using ulong = unsigned long;
 using uchar = unsigned char;
 
+#include "st6.h"
+
 #pragma warning(pop)
 #endif // _FLCOREDEFS_H_

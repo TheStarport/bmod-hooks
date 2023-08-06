@@ -195,23 +195,10 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 			RadiansToDegrees(GetTurnRate(curShip->fSteeringTorque[2], curShip->fAngularDrag[2], curShip->fRotationInertia[2])),
 		};
 
-		std::map<HpAttachmentType, std::vector<CacheString>> hardpoints;
-
-		for (auto hpType : curShip->vHardpoints)
-		{
-			auto hps = curShip->get_legal_hps(hpType);
-			if (!hps)
-			{
-				continue;
-			}
-
-			hardpoints[hpType] = *hps;
-		}
-
 		std::map<std::string, std::vector<HpAttachmentType>> hardpointToHpType;
-		for (auto& type : hardpoints)
+		for (auto& type : curShip->vHardpoints)
 		{
-			for (auto& hardpoint : type.second)
+			for (auto& hardpoint : type.hp)
 			{
 				std::string hp = hardpoint.value;
 				auto ref = hardpointToHpType.find(hp);
@@ -221,7 +208,7 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 					ref = hardpointToHpType.find(hp);
 				}
 
-				ref->second.emplace_back(type.first);
+				ref->second.emplace_back(type.type);
 			}
 		}
 

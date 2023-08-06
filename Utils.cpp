@@ -2,6 +2,9 @@
 
 DWORD dummy;
 
+const st6_malloc_t st6_malloc = reinterpret_cast<const st6_malloc_t>(GetProcAddress(GetModuleHandleA("msvcrt.dll"), "malloc"));
+const st6_free_t st6_free = reinterpret_cast<st6_free_t>(GetProcAddress(GetModuleHandleA("msvcrt.dll"), "free"));
+
 namespace Utils
 {
 	std::vector<std::wstring> CommandLineParser::tokens;

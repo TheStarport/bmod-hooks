@@ -910,6 +910,12 @@ namespace Archetype
 		unsigned char data[0x18];
 	};
 
+	struct Test
+	{
+		HpAttachmentType type;
+		st6::vector<CacheString> hp;
+	};
+
 	struct IMPORT Ship : EqObj
 	{
 		Ship(struct Ship const &);
@@ -949,7 +955,7 @@ namespace Archetype
 		/* 73 */ float	fStrafeForce;
 		/* 74 */ float  fStrafePowerUsage;
 		/* 75 */ float  fMaxBankAngle;
-		std::vector<HpAttachmentType> vHardpoints; // This isn't exactly right. There is something to do with cachestrings inside this
+		st6::vector<Test> vHardpoints; // This isn't exactly right. There is something to do with cachestrings inside this
 		/* 80 */ uint	iMaxNanobots;
 		/* 81 */ uint	iMaxShieldBats;
 	};

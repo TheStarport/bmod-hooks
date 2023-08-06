@@ -47,6 +47,7 @@ void SetupHack()
 	SetupClassExpansion();
 	InitInfocardEdits();
 	FreelancerOnlyHacks();
+
 }
 
 BOOL WINAPI DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)
