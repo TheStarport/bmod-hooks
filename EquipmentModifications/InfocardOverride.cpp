@@ -176,7 +176,7 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 		}
 
 		std::map<std::string, std::vector<HpAttachmentType>> hardpointToHpType;
-		for (auto& type : hardpoints) 
+		for (auto& type : hardpoints)
 		{
 			for (auto& hardpoint : type.second)
 			{
@@ -230,8 +230,8 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 			if (FindHp(pair.first))
 			{
 				if (matchGroup(hp, pairs, index + 1))
-				{	
-					return false;
+				{
+					return true;
 				}
 
 				pair.second++;
@@ -253,6 +253,7 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 			{ hp_gun_special_5, mediumMissileCount },
 			{ hp_gun_special_6, largeMissileCount },
 		};
+
 		std::vector<std::pair<HpAttachmentType, int&>> ballistic =
 		{
 			{ hp_gun_special_7, smallBallisticCount },
@@ -260,16 +261,46 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 			{ hp_gun_special_9, largeBallisticCount },
 		};
 
+		std::vector<std::pair<HpAttachmentType, int&>> energyFleet =
+		{
+			{ hp_turret_special_1, smallFleetEnergyCount },
+			{ hp_turret_special_2, mediumFleetEnergyCount },
+			{ hp_turret_special_3, largeFleetEnergyCount },
+		};
+
+		std::vector<std::pair<HpAttachmentType, int&>> missilesFleet =
+		{
+			{ hp_turret_special_4, smallFleetMissileCount },
+			{ hp_turret_special_5, mediumFleetMissileCount },
+			{ hp_turret_special_6, largeFleetMissileCount },
+		};
+
+		std::vector<std::pair<HpAttachmentType, int&>> ballisticFleet =
+		{
+			{ hp_turret_special_7, smallFleetBallisticCount },
+			{ hp_turret_special_8, mediumFleetBallisticCount },
+		};
+
+		std::vector<std::pair<HpAttachmentType, int&>> pdFleet =
+		{
+			{ hp_turret_special_9, pointDefenseCount },
+		};
+
+
 		for (auto& hp : hardpointToHpType)
 		{
 			matchGroup(hp, energy, 0);
 			matchGroup(hp, missiles, 0);
 			matchGroup(hp, ballistic, 0);
-			/*if (FindHp(hp_gun_special_1)) 
+			matchGroup(hp, energyFleet, 0);
+			matchGroup(hp, missilesFleet, 0);
+			matchGroup(hp, ballisticFleet, 0);
+			matchGroup(hp, pdFleet, 0);
+			/*if (FindHp(hp_gun_special_1))
 			{
-				if (FindHp(hp_gun_special_2)) 
+				if (FindHp(hp_gun_special_2))
 				{
-					if (FindHp(hp_gun_special_3)) 
+					if (FindHp(hp_gun_special_3))
 					{
 						largeEnergyCount++;
 						continue;
@@ -293,7 +324,7 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 					continue;
 				}
 				smallMissileCount++;
-				continue;				
+				continue;
 			}
 			else if (FindHp(hp_gun_special_7))
 			{
@@ -372,7 +403,7 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 
 		auto appendEquipment = [&equipment](int count, std::wstring prefix)
 		{
-			if (count) 
+			if (count)
 			{
 				equipment += std::format(L"{}x{}, ", count, prefix);
 			}
@@ -401,7 +432,7 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 		if (!equipment.empty())
 		{
 			auto back = equipment.back();
-			if (back == L' ') 
+			if (back == L' ')
 			{
 				equipment = equipment.substr(0, equipment.size() - 2);
 			}
@@ -416,10 +447,10 @@ bool HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 				<< L"<TEXT>Armor: " << curShip->fHitPoints << L"</TEXT><PARA/>"
 				<< L"<TEXT>Cargo Space: " << curShip->fHoldSize << L"m³</TEXT><PARA/>"
 				<< L"<TEXT>Turn Rate: " << std::setprecision(1) << turnRate.x << L"°/s</TEXT><PARA/>";
-				if (!equipment.empty())
-				{
-					ss << L"<TEXT>Hardpoints: </TEXT><TRA data=\"0xE7C68490\" mask=\"-1\"/><TEXT>" << equipment << L"</TEXT><PARA/>";
-				}
+			if (!equipment.empty())
+			{
+				ss << L"<TEXT>Hardpoints: </TEXT><TRA data=\"0xE7C68490\" mask=\"-1\"/><TEXT>" << equipment << L"</TEXT><PARA/>";
+			}
 		}
 		else
 		{
