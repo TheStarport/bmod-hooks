@@ -1,43 +1,5 @@
 #include "Main.hpp"
 
-int __fastcall GetIDS(Archetype::Equipment* object, CEquip* item)
-{
-	if (CEGun::cast(item))
-	{
-		CEGun* gun = (CEGun*)item;
-		return gun->MunitionArch()->iIdsName;
-	}
-
-	else if (CEMineDropper::cast(item))
-	{
-		CEMineDropper* mine = (CEMineDropper*)item;
-		return mine->MineArch()->iIdsName;
-	}
-
-	else if (CECounterMeasureDropper::cast(item))
-	{
-		CECounterMeasureDropper* cm = (CECounterMeasureDropper*)item;
-		return cm->CounterMeasureArch()->iIdsName;
-	}
-
-	return (object->iIdsName); // original IDS
-}
-
-DWORD idsJump = 0x004DDB05;
-__declspec(naked) void PatchIDS(void)
-{
-	__asm {
-		pushad
-		mov ecx, eax
-		mov edx, esi
-		call GetIDS
-		mov edi, eax
-		popad
-		mov ecx, esi
-		jmp[idsJump]
-	}
-}
-
 constexpr uint ShipOverrideIDS = 459593;
 #define ShipWeaponInfoIDS 459592
 Archetype::Ship* curShip = nullptr;
@@ -132,15 +94,9 @@ __declspec(naked) void PatchShipInfoSellerYourShipIds()
 
 void IdsPatch()
 {
-#define ADDR_IDS    ((PBYTE)0x4ddb00)
 #define ADDR_IDS_SHIP_SELLER   ((PBYTE)0x4B8C00)
 #define ADDR_IDS_SHIP_SELLER_YOUR_SHIP   ((PBYTE)0x4B8FEB)
 #define ADDR_IDS_SHIP_INVENTORY   ((PBYTE)0x47BD38)
-
-	ProtectExecuteReadWrite(ADDR_IDS, 5);
-	ADDR_IDS[0] = 0xe9;
-	*(DWORD*)(ADDR_IDS + 1) = (PBYTE)PatchIDS - ADDR_IDS - 5;
-	//Above code seems to be responsible for lack of weapon list text in space
 
 	ProtectExecuteReadWrite(ADDR_IDS_SHIP_SELLER, 5);
 	ADDR_IDS_SHIP_SELLER[0] = 0xe9;
