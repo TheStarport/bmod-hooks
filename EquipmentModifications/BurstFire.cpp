@@ -47,7 +47,8 @@ typedef void* (__fastcall* UnkClassType)(void* ptr, void* edx, CELauncher* launc
 UnkClassType unkPtr;
 PBYTE unkData;
 
-std::map<CELauncher*, void*> weirdFreelancerClassMap;
+// Map of launcher to pair of unk class pointer and ship owner id
+std::map<CELauncher*, std::pair<void*, uint>> weirdFreelancerClassMap;
 FireResult __fastcall CEGunFireDetour(CEGun* gun, void* edx, const Vector& vector)
 {
 	// If we are not a custom burst 
@@ -123,12 +124,18 @@ void UpdateQueuedShots(double& delta)
 		if (shot->timeUntilNextShot <= 0)
 		{
 			shot->readyToFire = true;
+			auto randClass = weirdFreelancerClassMap[shot->gun];
 
-			void* randClass = weirdFreelancerClassMap[shot->gun];
+			// check if owner alive
+			if (!CObject::Find(randClass.second, CObject::Class::CEQOBJ_MASK))
+			{
+				shot->remainingShots = 0;
+				return;
+			}
 
 			typedef DWORD(__fastcall* FireFunctionType)(void* thing, void* edx, Vector& vec);
-			const FireFunctionType fireFunc = (FireFunctionType)((*(void***)randClass)[3]);
-			fireFunc(randClass, nullptr, shot->originalFirePoint);
+			const FireFunctionType fireFunc = (FireFunctionType)((*(void***)randClass.first)[3]);
+			fireFunc(randClass.first, nullptr, shot->originalFirePoint);
 
 			shot->remainingShots--;
 			shot->timeUntilNextShot = shot->timeBetweenShots;
@@ -142,7 +149,7 @@ void* __fastcall UnkDetour(void* ptr, void* edx, CELauncher* launcher, void* unk
 	const auto a = unkPtr(ptr, edx, launcher, unk);
 	Utils::Memory::Detour(PBYTE(unkPtr), UnkDetour, unkData);
 
-	weirdFreelancerClassMap[launcher] = a;
+	weirdFreelancerClassMap[launcher] = { a, launcher->owner->iID };
 	return a;
 }
 
