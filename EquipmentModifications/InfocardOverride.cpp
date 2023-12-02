@@ -1,7 +1,7 @@
 #include "Main.hpp"
 
-constexpr uint ShipOverrideIDS = 459593;
-#define ShipWeaponInfoIDS 459592
+constexpr uint ShipOverrideIDS = 471579;
+#define ShipWeaponInfoIDS 471578
 Archetype::Ship* curShip = nullptr;
 int __fastcall GetShipIDS(Archetype::Ship* ship)
 {
