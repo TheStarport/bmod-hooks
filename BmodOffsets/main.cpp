@@ -292,6 +292,36 @@ extern "C" EXPORT void DestroyInstance(LPVOID a1)
 	return;
 }
 
+std::map <std::string, uint> hashMap;
+using CreateIdType = uint(*)(const char*);
+CreateIdType createId = (CreateIdType)CreateID;
+PBYTE createIdData = PBYTE(malloc(5));
+
+FILE* hashFile = nullptr;
+
+uint CreateIdDetour(const char* string)
+{
+	if (!string) return 0;
+
+	if (!hashFile)
+	{
+		fopen_s(&hashFile, "hashmap.csv", "wb");
+	}
+
+	Utils::Memory::UnDetour(PBYTE(createId), createIdData);
+	uint hash = CreateID(string);
+	Utils::Memory::Detour(PBYTE(createId), CreateIdDetour, createIdData);
+
+	std::string str = string;
+	if (hashMap.find(str) == hashMap.end())
+	{
+		hashMap[str] = hash;
+		fprintf_s(hashFile, "%s,%u,0x%X\n", string, hash, hash);
+		fflush(hashFile);
+	}
+	return hash;
+}
+
 //Run these patches for the client only.
 void SetupHack()
 {
@@ -302,6 +332,9 @@ void SetupHack()
 	if (EndsWith(filename, L"Freelancer.exe"))
 	{
 		FreelancerHacks();
+#ifdef _DEBUG
+		Utils::Memory::Detour(PBYTE(createId), CreateIdDetour, createIdData);
+#endif
 	}	
 	CommonHacks();
 }
