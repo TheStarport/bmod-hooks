@@ -59,10 +59,50 @@ __declspec(naked) void RegenRestartNaked()
 	}
 }
 
+/*
+loc_48E571:
+mov     edi, ds:?get_system_id@Universe@@YAIPBD@Z ; Universe::get_system_id(char const *)
+push    offset aSt02    ; "St02"
+call    edi ; Universe::get_system_id(char const *) ; Universe::get_system_id(char const *)
+push    offset aSt03    ; "St03"
+mov     [esi+0F28h], eax
+call    edi ; Universe::get_system_id(char const *) ; Universe::get_system_id(char const *)
+push    offset aSt03b   ; "St03b"
+mov     [esi+0F2Ch], eax
+call    edi ; Universe::get_system_id(char const *) ; Universe::get_system_id(char const *)
+push    offset aSt02c   ; "St02c"
+mov     [esi+0F30h], eax
+call    edi ; Universe::get_system_id(char const *) ; Universe::get_system_id(char const *)
+mov     ecx, [esp+0C0h+var_C]
+add     esp, 10h
+mov     [esi+0F34h], eax
+*/
+
+static DWORD navMapCleanRetAddress = 0x8E5AF;
+__declspec(naked) void PatchOutNoNavMapEntries()
+{
+	__asm {
+		mov [esi+0xF28], 0
+		mov [esi+0xF2C], 0
+		mov [esi+0xF30], 0
+		mov [esi+0xF34], 0
+		mov ecx, [esp+0xC0-0xC]
+		jmp navMapCleanRetAddress
+	}
+}
+
+bool freelancerOffsetsChanged = false;
+
 //Hacks for Freelancer.exe
 void FreelancerHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(nullptr));
+
+	if (!freelancerOffsetsChanged) 
+	{
+		freelancerOffsetsChanged = true;
+		navMapCleanRetAddress += mod;
+	}
 
 	//Filter out incompatible builds on server by default. Too early on it's own.
 	//PatchM(0x1628F4, 0x50);
@@ -143,6 +183,9 @@ void FreelancerHacks()
 	//Supress "Failed to get start location" messages in FLSpew.txt
 	PatchM(0x03B348, 0xEB);
 
+	const auto noNavMapEntriesOffset = PBYTE(mod + 0x8E571);
+	Utils::Memory::Patch(noNavMapEntriesOffset, PatchOutNoNavMapEntries);
+
 	//if (!cmd.CmdOptionExists(L"-groups"))
 	//{
 	//	//Allows weapons group activation keybinds to activate the next/previous weapon group:
@@ -167,7 +210,7 @@ void FreelancerHacks()
 	//}
 }
 
-bool offsetsChanged = false;
+bool serverOffsetsChanged = false;
 
 //Hacks for server.dll
 void ServerHacks()
@@ -193,9 +236,9 @@ void ServerHacks()
 	}
 
 	//Patch for restart.fl. This only occurs once when the game is started.
-	if (!offsetsChanged) 
+	if (!serverOffsetsChanged) 
 	{
-		offsetsChanged = true;
+		serverOffsetsChanged = true;
 		restartProcessSave = PVOID(DWORD(restartProcessSave) + mod);
 		restartReplacementOffset += mod;
 		restartReturnAddressFoundRestart += mod;
