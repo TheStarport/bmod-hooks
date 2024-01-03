@@ -127,7 +127,7 @@ void UpdateQueuedShots(double& delta)
 			auto randClass = weirdFreelancerClassMap[shot->gun];
 
 			// check if owner alive
-			if (!CObject::Find(randClass.second, CObject::Class::CEQOBJ_MASK))
+			if (!CObject::Find(randClass.second, CObject::Class::CSHIP_OBJECT))
 			{
 				shot->remainingShots = 0;
 				return;
