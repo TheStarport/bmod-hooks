@@ -319,6 +319,10 @@ void ContentHacks()
 
 	//NPC 'heartbeat' timer.
 	PatchV(0x0BA57A, 31.0f);
+
+	//Reputation needed for lawful factions to show rumors.
+	PatchV(0x12E354, 0.0f);
+
 }
 
 //Run all our patching functions.
