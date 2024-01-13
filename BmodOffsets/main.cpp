@@ -296,6 +296,9 @@ void CommonHacks()
 	//Repair price multiplier ratio
 	//PatchV(0x004A28, 0.33f);
 	//PatchV(0x0057FA, 0.33f);
+
+	//Fix multiple HpFire bugs
+	PatchM(0x039F77, 0x83, 0xFA, 0xFF, 0xBA, 0xFF, 0xFF, 0xFF, 0xFF, 0xC3)
 }
 
 //Hacks for content.dll
@@ -307,7 +310,7 @@ void ContentHacks()
 	if (!cmd.CmdOptionExists(L"-campaign")) 
 	{
 		//Force newplayer.fl to m13.ini (Open Singleplayer)
-		PatchM(0x04EE3A, 0xA2, 0x6A);
+		//PatchM(0x04EE3A, 0xA2, 0x6A);
 	}
 
 	//Increase NPC despawn distance (SP and MP)
