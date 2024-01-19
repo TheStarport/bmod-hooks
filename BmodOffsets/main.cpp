@@ -53,7 +53,7 @@ __declspec(naked) void RegenRestartNaked()
 		jmp restartReturnAddressNormalSave
 
 		found :
-			popad
+		popad
 			add esp, 8
 			jmp restartReturnAddressFoundRestart
 	}
@@ -82,11 +82,11 @@ static DWORD navMapCleanRetAddress = 0x8E5AF;
 __declspec(naked) void PatchOutNoNavMapEntries()
 {
 	__asm {
-		mov [esi+0xF28], 0
-		mov [esi+0xF2C], 0
-		mov [esi+0xF30], 0
-		mov [esi+0xF34], 0
-		mov ecx, [esp+0xC0-0xC]
+		mov[esi + 0xF28], 0
+		mov[esi + 0xF2C], 0
+		mov[esi + 0xF30], 0
+		mov[esi + 0xF34], 0
+		mov ecx, [esp + 0xC0 - 0xC]
 		jmp navMapCleanRetAddress
 	}
 }
@@ -98,7 +98,7 @@ void FreelancerHacks()
 {
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(nullptr));
 
-	if (!freelancerOffsetsChanged) 
+	if (!freelancerOffsetsChanged)
 	{
 		freelancerOffsetsChanged = true;
 		navMapCleanRetAddress += mod;
@@ -236,7 +236,7 @@ void ServerHacks()
 	}
 
 	//Patch for restart.fl. This only occurs once when the game is started.
-	if (!serverOffsetsChanged) 
+	if (!serverOffsetsChanged)
 	{
 		serverOffsetsChanged = true;
 		restartProcessSave = PVOID(DWORD(restartProcessSave) + mod);
@@ -256,7 +256,7 @@ void CommonHacks()
 	PatchM(0x08E86A, 0xEB, 0x39);
 
 	//Fixes CEGun::CanSeeTargetObject, allowing NPCs to 'see' everything.
-	PatchM(0x038590, 0xB0, 0x01, 0xC2, 0x04, 0x00)
+	PatchM(0x038590, 0xB0, 0x01, 0xC2, 0x04, 0x00);
 
 	//Enable NPC countermeasure and scanner usage.
 	PatchM(0x13E52C, 0x00);
@@ -298,7 +298,11 @@ void CommonHacks()
 	//PatchV(0x0057FA, 0.33f);
 
 	//Fix multiple HpFire bugs
-	PatchM(0x039F77, 0x83, 0xFA, 0xFF, 0xBA, 0xFF, 0xFF, 0xFF, 0xFF, 0xC3)
+	PatchM(0x039F77, 0x83, 0xFA, 0xFF, 0xBA, 0xFF, 0xFF, 0xFF, 0xFF, 0xC3);
+
+	//Change MISSION_SATELLITE check flag
+	PatchM(0x18C87C, 0x10, 0x90)
+
 }
 
 //Hacks for content.dll
@@ -307,7 +311,7 @@ void ContentHacks()
 	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(L"content.dll"));
 
 	Utils::CommandLineParser cmd;
-	if (!cmd.CmdOptionExists(L"-campaign")) 
+	if (!cmd.CmdOptionExists(L"-campaign"))
 	{
 		//Force newplayer.fl to m13.ini (Open Singleplayer)
 		//PatchM(0x04EE3A, 0xA2, 0x6A);
@@ -385,7 +389,7 @@ void SetupHack()
 #ifdef _DEBUG
 		Utils::Memory::Detour(PBYTE(createId), CreateIdDetour, createIdData);
 #endif
-	}	
+	}
 	CommonHacks();
 }
 
