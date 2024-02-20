@@ -359,7 +359,7 @@ uint CreateIdDetour(const char* string)
 
 	if (!hashFile)
 	{
-		fopen_s(&hashFile, "hashmap.csv", "wb");
+		fopen_s(&hashFile, "hashmap.txt", "wb");
 	}
 
 	Utils::Memory::UnDetour(PBYTE(createId), createIdData);
