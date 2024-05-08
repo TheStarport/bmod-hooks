@@ -183,6 +183,10 @@ void FreelancerHacks()
 	//Supress "Failed to get start location" messages in FLSpew.txt
 	PatchM(0x03B348, 0xEB);
 
+	//Show all group members on the Navmap correctly in MP
+	PatchM(0x08D89B, 0x83, 0xC5, 0x18, 0xEB, 0x50);
+	PatchM(0x08D997, 0x00);
+
 	const auto noNavMapEntriesOffset = PBYTE(mod + 0x8E571);
 	Utils::Memory::Patch(noNavMapEntriesOffset, PatchOutNoNavMapEntries);
 
