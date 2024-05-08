@@ -242,29 +242,29 @@ bool __stdcall HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 
 		std::vector<std::pair<HpAttachmentType, int&>> energyFleet =
 		{
-			{ hp_turret_special_2, smallFleetEnergyCount },
+			{ hp_turret_special_1, smallFleetEnergyCount },
 			{ hp_turret_special_2, mediumFleetEnergyCount },
-			{ hp_turret_special_2, largeFleetEnergyCount },
+			{ hp_turret_special_3, largeFleetEnergyCount },
 		};
 
 		std::vector<std::pair<HpAttachmentType, int&>> missilesFleet =
 		{
 			{ hp_turret_special_4, smallFleetMissileCount },
-			{ hp_turret_special_4, mediumFleetMissileCount },
-			{ hp_turret_special_4, largeFleetMissileCount },
+			{ hp_turret_special_5, mediumFleetMissileCount },
+			{ hp_turret_special_6, largeFleetMissileCount },
 		};
 
 		std::vector<std::pair<HpAttachmentType, int&>> ballisticFleet =
 		{
-			{ hp_turret_special_3, smallFleetBallisticCount },
-			{ hp_turret_special_3, mediumFleetBallisticCount },
-			{ hp_turret_special_3, largeFleetBallisticCount },
+			{ hp_turret_special_7, smallFleetBallisticCount },
+			{ hp_turret_special_8, mediumFleetBallisticCount },
+			{ hp_turret_special_9, largeFleetBallisticCount },
 
 		};
 
 		std::vector<std::pair<HpAttachmentType, int&>> pdFleet =
 		{
-			{ hp_turret_special_1, pointDefenseCount },
+			{ hp_turret_special_10, pointDefenseCount },
 		};
 
 
@@ -310,15 +310,15 @@ bool __stdcall HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 		appendEquipment(mediumBallisticCount, L"MB");
 		appendEquipment(largeBallisticCount, L"LB");
 
-		appendEquipment(smallFleetEnergyCount, L"Placeholder");
-		appendEquipment(mediumFleetEnergyCount, L"Placeholder");
-		appendEquipment(largeFleetEnergyCount, L"XLE");
-		appendEquipment(smallFleetMissileCount, L"Placeholder");
-		appendEquipment(mediumFleetMissileCount, L"Placeholder");
-		appendEquipment(largeFleetMissileCount, L"XLM");
-		appendEquipment(smallFleetBallisticCount, L"Placeholder");
-		appendEquipment(mediumFleetBallisticCount, L"Placeholder");
-		appendEquipment(largeFleetBallisticCount, L"XLB");
+		appendEquipment(smallFleetEnergyCount, L"SFE");
+		appendEquipment(mediumFleetEnergyCount, L"MFE");
+		appendEquipment(largeFleetEnergyCount, L"LFE");
+		appendEquipment(smallFleetMissileCount, L"SFM");
+		appendEquipment(mediumFleetMissileCount, L"MFM");
+		appendEquipment(largeFleetMissileCount, L"LFM");
+		appendEquipment(smallFleetBallisticCount, L"SFB");
+		appendEquipment(mediumFleetBallisticCount, L"MFB");
+		appendEquipment(largeFleetBallisticCount, L"LFB");
 		appendEquipment(pointDefenseCount, L"PD");
 
 		if (!equipment.empty())
