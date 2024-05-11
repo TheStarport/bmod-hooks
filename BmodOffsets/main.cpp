@@ -230,6 +230,10 @@ void ServerHacks()
 	//Respawn time for any solar object to regain full health once destroyed in MP.
 	PatchV(0x085530, 600.0);
 
+	//Square of player and group disappear distances in MP
+	PatchV(0x086AF0, 196000000.0f);
+	PatchV(0x086AF4, 625000000.0f);
+
 	Utils::CommandLineParser cmd;
 	if (!cmd.CmdOptionExists(L"-decrypt"))
 	{
@@ -334,6 +338,8 @@ void ContentHacks()
 	//Reputation needed for lawful factions to show rumors.
 	PatchV(0x12E354, 0.0f);
 
+	// Distance over which NPC spawns ignore density cap for multiple players
+	PatchV(0x117A68, 14000.0f);
 }
 
 //Run all our patching functions.
