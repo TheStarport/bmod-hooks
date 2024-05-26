@@ -212,6 +212,36 @@ void FreelancerHacks()
 	//	PatchM(0x0DC5BA, 0x50, 0x50);
 	//	PatchM(0x0DC5C6, 0x58, 0x89, 0x86, 0x80, 0x01, 0x00, 0x00, 0x90, 0x90, 0x90)
 	//}
+
+
+	/*auto* screenWidth = reinterpret_cast<const DWORD*>(0x679bc8);
+	auto* screenHeight = reinterpret_cast<const DWORD*>(0x679bcc);
+
+	const float aspectRatio = static_cast<float>(*screenWidth) / static_cast<float>(*screenHeight);
+
+
+	static DWORD fontAdjustedWidth = *screenHeight * 4 / 3;
+	if (aspectRatio >= 1.6)
+	{
+		fontAdjustedWidth = *screenHeight * 5 / 4;
+	}
+
+	const auto adjustedWidth = &fontAdjustedWidth;
+	Utils::Memory::WriteProcMem(0x415cc7, (void*)&adjustedWidth, 4);
+	Utils::Memory::WriteProcMem(0x416663, (void*)&adjustedWidth, 4);
+	Utils::Memory::WriteProcMem(0x416913, (void*)&adjustedWidth, 4);
+	Utils::Memory::WriteProcMem(0x416be3, (void*)&adjustedWidth, 4);
+	Utils::Memory::WriteProcMem(0x412e8d, (void*)&adjustedWidth, 4);
+
+
+#define PatchM(offset, ...)\
+{\
+	constexpr DWORD o = DWORD(offset);\
+	std::array<byte, std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value > patch = { __VA_ARGS__ };\
+	Utils::Memory::WriteProcMem(mod + o, patch.data(), patch.size());\
+}*/
+
+
 }
 
 bool serverOffsetsChanged = false;
@@ -396,9 +426,7 @@ void SetupHack()
 	if (EndsWith(filename, L"Freelancer.exe"))
 	{
 		FreelancerHacks();
-#ifdef _DEBUG
 		Utils::Memory::Detour(PBYTE(createId), CreateIdDetour, createIdData);
-#endif
 	}
 	CommonHacks();
 }
