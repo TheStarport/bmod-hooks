@@ -187,6 +187,9 @@ void FreelancerHacks()
 	PatchM(0x08D89B, 0x83, 0xC5, 0x18, 0xEB, 0x50);
 	PatchM(0x08D997, 0x00);
 
+	//Fix for Multiple HpFire Bug (Alternative to Ven's offset in common.dll)
+	PatchM(0x134D3D, 0x90, 0xBF, 0x01, 0x00, 0x00, 0x00);
+
 	const auto noNavMapEntriesOffset = PBYTE(mod + 0x8E571);
 	Utils::Memory::Patch(noNavMapEntriesOffset, PatchOutNoNavMapEntries);
 
