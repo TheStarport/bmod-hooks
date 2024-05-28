@@ -59,25 +59,6 @@ __declspec(naked) void RegenRestartNaked()
 	}
 }
 
-/*
-loc_48E571:
-mov     edi, ds:?get_system_id@Universe@@YAIPBD@Z ; Universe::get_system_id(char const *)
-push    offset aSt02    ; "St02"
-call    edi ; Universe::get_system_id(char const *) ; Universe::get_system_id(char const *)
-push    offset aSt03    ; "St03"
-mov     [esi+0F28h], eax
-call    edi ; Universe::get_system_id(char const *) ; Universe::get_system_id(char const *)
-push    offset aSt03b   ; "St03b"
-mov     [esi+0F2Ch], eax
-call    edi ; Universe::get_system_id(char const *) ; Universe::get_system_id(char const *)
-push    offset aSt02c   ; "St02c"
-mov     [esi+0F30h], eax
-call    edi ; Universe::get_system_id(char const *) ; Universe::get_system_id(char const *)
-mov     ecx, [esp+0C0h+var_C]
-add     esp, 10h
-mov     [esi+0F34h], eax
-*/
-
 static DWORD navMapCleanRetAddress = 0x8E5AF;
 __declspec(naked) void PatchOutNoNavMapEntries()
 {
@@ -187,72 +168,49 @@ void FreelancerHacks()
 	PatchM(0x08D89B, 0x83, 0xC5, 0x18, 0xEB, 0x50);
 	PatchM(0x08D997, 0x00);
 
-	//Fix for Multiple HpFire Bug (Alternative to Ven's offset in common.dll)
+	//Fix for Multiple HpFire Bug
 	PatchM(0x134D3D, 0x90, 0xBF, 0x01, 0x00, 0x00, 0x00);
 
 	const auto noNavMapEntriesOffset = PBYTE(mod + 0x8E571);
 	Utils::Memory::Patch(noNavMapEntriesOffset, PatchOutNoNavMapEntries);
 
-	//if (!cmd.CmdOptionExists(L"-groups"))
-	//{
-	//	//Allows weapons group activation keybinds to activate the next/previous weapon group:
-	//	PatchM(0x0F6173, 0x89, 0x44, 0x24, 0x0C, 0xC3, 0xE9, 0xA9, 0x07, 0x00, 0x00);
-	//	PatchM(0x0F6184, 0x8B, 0xD0, 0x83, 0xF8, 0x06, 0x0F, 0x4D, 0x44, 0x24, 0x10, 0xEB, 0xE8);
-	//	PatchM(0x0F6643, 0x83, 0xF8, 0x06, 0x75, 0x02, 0x33, 0xC0, 0x89, 0x41, 0x28, 0xC2, 0x04, 0x00);
-	//	PatchM(0x0F67A8, 0x83, 0xFA, 0x07, 0x74, 0x0E, 0xEB, 0x1C);
-	//	PatchM(0x0F67BB, 0xE9, 0xA1, 0x01, 0x00, 0x00);
-	//	PatchM(0x0F67CB, 0xE9, 0x73, 0xFE, 0xFF, 0xFF);
-	//	PatchM(0x0F6926, 0x7C, 0x43, 0x40, 0xE9, 0x7A, 0xFE, 0xFF, 0xFF);
-	//	PatchM(0x0F6961, 0x48, 0x48, 0x83, 0xF8, 0xFF, 0x75, 0x03, 0x83, 0xC0, 0x06, 0xE9, 0xDA, 0xFC, 0xFF, 0xFF)
-
-	//	//Makes keybind "ACTIVATE WEAPONS GROUP 5" activate the next weapon group:
-	//	PatchM(0x0DC560, 0x06);
-	//	PatchM(0x0DC56B, 0x50, 0x50);
-	//	PatchM(0x0DC577, 0x5A, 0x89, 0x96, 0x80, 0x01, 0x00, 0x00, 0x90, 0x90, 0x90);
-
-	//	//Makes keybind "ACTIVATE WEAPONS GROUP 6" activate the previous weapon group:
-	//	PatchM(0x0DC5AF, 0x07);
-	//	PatchM(0x0DC5BA, 0x50, 0x50);
-	//	PatchM(0x0DC5C6, 0x58, 0x89, 0x86, 0x80, 0x01, 0x00, 0x00, 0x90, 0x90, 0x90)
-	//}
-
-
-	/*auto* screenWidth = reinterpret_cast<const DWORD*>(0x679bc8);
-	auto* screenHeight = reinterpret_cast<const DWORD*>(0x679bcc);
-
-	const float aspectRatio = static_cast<float>(*screenWidth) / static_cast<float>(*screenHeight);
-
-
-	static DWORD fontAdjustedWidth = *screenHeight * 4 / 3;
-	if (aspectRatio >= 1.6)
-	{
-		fontAdjustedWidth = *screenHeight * 5 / 4;
-	}
-
-	const auto adjustedWidth = &fontAdjustedWidth;
-	Utils::Memory::WriteProcMem(0x415cc7, (void*)&adjustedWidth, 4);
-	Utils::Memory::WriteProcMem(0x416663, (void*)&adjustedWidth, 4);
-	Utils::Memory::WriteProcMem(0x416913, (void*)&adjustedWidth, 4);
-	Utils::Memory::WriteProcMem(0x416be3, (void*)&adjustedWidth, 4);
-	Utils::Memory::WriteProcMem(0x412e8d, (void*)&adjustedWidth, 4);
-
-
-#define PatchM(offset, ...)\
-{\
-	constexpr DWORD o = DWORD(offset);\
-	std::array<byte, std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value > patch = { __VA_ARGS__ };\
-	Utils::Memory::WriteProcMem(mod + o, patch.data(), patch.size());\
-}*/
-
-
 }
 
 bool serverOffsetsChanged = false;
 
+
+struct SrvGun
+{
+	void* vtable;
+	CELauncher* launcher;
+};
+
+DWORD server;
+UINT projectilesPerFire;
+
+typedef bool(__fastcall HandlePlayerLauncherFire)(SrvGun* srvGun, PVOID _edx, Vector* vector);
+
+bool __fastcall HandlePlayerLauncherFire_Hook(SrvGun* srvGun, PVOID _edx, Vector* vector)
+{
+	projectilesPerFire = srvGun->launcher->GetProjectilesPerFire();
+	return ((HandlePlayerLauncherFire*)(server + 0xD840))(srvGun, _edx, vector);
+}
+
+__declspec(naked) void SetProjectilesPerFire()
+{
+	__asm {
+		push 0x3F800000
+		push[projectilesPerFire]
+		mov eax, [server]
+		add eax, 0xD91A
+		jmp eax
+	}
+}
+
 //Hacks for server.dll
 void ServerHacks()
 {
-	DWORD mod = reinterpret_cast<DWORD>(GetModuleHandle(L"server.dll"));
+	DWORD mod = server = reinterpret_cast<DWORD>(GetModuleHandle(L"server.dll"));
 
 	//Increase NPC despawn distance.
 	PatchV(0x086AEC, std::powf(20000.0f, 2.0f));
@@ -286,6 +244,12 @@ void ServerHacks()
 		restartReturnAddressNormalSave += mod;
 	}
 	Utils::Memory::Patch(PBYTE(restartReplacementOffset), RegenRestartNaked);
+
+	//Patch for bugs associated with multiple HpFire hardpoints:
+	Utils::Memory::PatchCallAddr(PCHAR(mod), 0xD9A9, PCHAR(HandlePlayerLauncherFire_Hook));
+	Utils::Memory::PatchCallAddr(PCHAR(mod), 0xDC09, PCHAR(HandlePlayerLauncherFire_Hook));
+	Utils::Memory::PatchCallAddr(PCHAR(mod), 0xE009, PCHAR(HandlePlayerLauncherFire_Hook));
+	Utils::Memory::Patch(PBYTE(mod + 0xD913), SetProjectilesPerFire);
 }
 
 //Hacks for common.dll
@@ -320,26 +284,13 @@ void CommonHacks()
 	PatchV(0x01A74C, 120.0f);
 	PatchM(0x01A892, 0x4C, 0xA7, 0x27);
 
-	//Include external equipment in cargo size.
-	//PatchM(0x053048, 0xE3, 0x1F);
-	//PatchM(0x05330E, 0xE3, 0x1F);
-	//PatchM(0x0A9BA3, 0x00);
-	//PatchM(0x0AA904, 0x00);
-
 	//disable ArchDB::Get random mission spew warning.
 	PatchM(0x0995B6, 0x90, 0x90);
 	PatchM(0x0995FC, 0x90, 0x90);
 
-	//Use thruster hp_type for armour.
-	//PatchM(0x139AF0, 0xC0, 0xDE, 0x26);
-	//PatchM(0x139AFC, 0x10, 0xA7, 0x27);
-
 	//Repair price multiplier ratio
 	//PatchV(0x004A28, 0.33f);
 	//PatchV(0x0057FA, 0.33f);
-
-	//Fix multiple HpFire bugs
-	//PatchM(0x039F77, 0x83, 0xFA, 0xFF, 0xBA, 0xFF, 0xFF, 0xFF, 0xFF, 0xC3);
 
 	//Change MISSION_SATELLITE check flag
 	PatchM(0x18C87C, 0x10, 0x90)
