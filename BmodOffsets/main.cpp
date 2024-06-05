@@ -171,6 +171,9 @@ void FreelancerHacks()
 	//Fix for Multiple HpFire Bug
 	PatchM(0x134D3D, 0x90, 0xBF, 0x01, 0x00, 0x00, 0x00);
 
+	//Enable targeting reticule for everything
+	PatchM(0x0F045B, 0x00, 0x00);
+
 	const auto noNavMapEntriesOffset = PBYTE(mod + 0x8E571);
 	Utils::Memory::Patch(noNavMapEntriesOffset, PatchOutNoNavMapEntries);
 
