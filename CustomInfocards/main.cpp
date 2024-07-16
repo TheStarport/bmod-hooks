@@ -187,7 +187,7 @@ uint SetGunInfocard(Archetype::Gun* gun, byte flags)
 		auto accelerationCap = munition->fLifeTime - motor->fLifetime;
 
 		//If the munition has a motor, then use the missile range formula instead. 
-		GetStatLine(flags, &len, 471624, f0fmt, 1759, (gun->fMuzzleVelocity * motor->fLifetime + (motor->fAccel / 2) * std::pow(motor->fLifetime, 2)) + accelerationCap * topSpeed);
+		GetStatLine(flags, &len, 471624, f0fmt, 1759, ((gun->fMuzzleVelocity + 300) * munition->fLifeTime + (motor->fAccel / 2) * std::pow(motor->fLifetime, 2)) + accelerationCap * topSpeed);
 	}
 	if (gun->fDispersionAngle > 0.0f and munition->fMaxAngularVelocity == 100.0f or gun->iProjectileArchID == CreateID("bm_mis_ugb_01_ammo") or gun->iProjectileArchID == CreateID("bm_mis_rocket_01_ammo"))
 	{
