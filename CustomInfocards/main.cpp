@@ -201,7 +201,7 @@ uint SetGunInfocard(Archetype::Gun* gun, byte flags)
 	}
 	if (munition->fDetonationDist > 0)
 	{
-		GetStatLine(flags, &len, 471615, f0fmt, 1759, munition->fDetonationDist);
+		GetStatLine(flags, &len, 471623, f0fmt, 1759, munition->fDetonationDist);
 	}
 	return len;
 }
