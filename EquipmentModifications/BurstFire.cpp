@@ -8,6 +8,7 @@ struct BurstWeapon
 	float timeUntilNextShot;
 	bool readyToFire;
 	Vector originalFirePoint{};
+	Vector updatedFirePoint{};
 
 	CEGun* gun;
 
@@ -34,7 +35,6 @@ struct CustomBurstWeaponArch
 		totalShots = 1;
 	}
 };
-
 typedef FireResult(__fastcall* CEFireType)(CELauncher* launcher, void* edx, Vector const&);
 
 static std::vector<std::shared_ptr<BurstWeapon>> queuedShots;
@@ -49,6 +49,7 @@ PBYTE unkData;
 
 // Map of launcher to pair of unk class pointer and ship owner id
 std::map<CELauncher*, std::pair<void*, uint>> weirdFreelancerClassMap;
+
 FireResult __fastcall CEGunFireDetour(CEGun* gun, void* edx, const Vector& vector)
 {
 	// If we are not a custom burst 
@@ -76,8 +77,8 @@ FireResult __fastcall CEGunFireDetour(CEGun* gun, void* edx, const Vector& vecto
 			burst->timeUntilNextShot = customArch->second->timeBetweenShots;
 			burst->timeBetweenShots = customArch->second->timeBetweenShots;
 			burst->remainingShots = customArch->second->totalShots - 1;
-			queuedShots.emplace_back(burst);
 			burst->originalFirePoint = vector;
+			queuedShots.emplace_back(burst);
 		}
 
 		return a;
@@ -103,7 +104,6 @@ FireResult __fastcall CEGunFireDetour(CEGun* gun, void* edx, const Vector& vecto
 
 		return a;
 	}
-
 	return FR_RefireDelayNotElapsed;
 }
 
@@ -124,22 +124,32 @@ void UpdateQueuedShots(double& delta)
 		if (shot->timeUntilNextShot <= 0)
 		{
 			shot->readyToFire = true;
-			auto randClass = weirdFreelancerClassMap[shot->gun];
+			const auto Gun = shot->gun;
 
-			// check if owner alive
-			if (!CObject::Find(randClass.second, CObject::Class::CSHIP_OBJECT))
+			auto randClass = weirdFreelancerClassMap[shot->gun];
+			const auto ship = Utils::GetCShip();
+
+			shot->updatedFirePoint = Gun->GetAvgBarrelDirWS();
+
+			shot->updatedFirePoint.x = shot->updatedFirePoint.x * 10000000000;
+			shot->updatedFirePoint.y = shot->updatedFirePoint.y * 10000000000;
+			shot->updatedFirePoint.z = shot->updatedFirePoint.z * 10000000000;
+
+			if (!Gun->CanFire(shot->updatedFirePoint) || ship->get_hit_pts() <= 0 || !CObject::Find(randClass.second, CObject::Class::CSHIP_OBJECT) || Gun->IsDestroyed())
 			{
 				shot->remainingShots = 0;
 				return;
 			}
+			else {
 
-			typedef DWORD(__fastcall* FireFunctionType)(void* thing, void* edx, Vector& vec);
-			const FireFunctionType fireFunc = (FireFunctionType)((*(void***)randClass.first)[3]);
-			fireFunc(randClass.first, nullptr, shot->originalFirePoint);
-
+				typedef DWORD(__fastcall* FireFunctionType)(void* thing, void* edx, Vector& vec);
+				const FireFunctionType fireFunc = (FireFunctionType)((*(void***)randClass.first)[3]);
+				fireFunc(randClass.first, nullptr, shot->updatedFirePoint);
+			}
 			shot->remainingShots--;
 			shot->timeUntilNextShot = shot->timeBetweenShots;
 		}
+
 	}
 }
 
