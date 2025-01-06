@@ -27,6 +27,8 @@ extern DWORD dummy;
 #define ProtectExecuteReadWrite( addr, size ) VirtualProtect( addr, size, PAGE_EXECUTE_READWRITE, &dummy )
 #define ProtectReadWrite( addr, size ) VirtualProtect( addr, size, PAGE_READWRITE, &dummy )
 
+typedef unsigned __int64 mstime;
+
 template <typename T, size_t N>
 constexpr size_t countof(T(&)[N])
 {
@@ -35,6 +37,8 @@ constexpr size_t countof(T(&)[N])
 
 namespace Utils
 {
+	float Distance3D(const Vector& v1, const Vector& v2);
+
 	namespace String
 	{
 		// Utils
@@ -80,6 +84,7 @@ namespace Utils
 
 		// Detour
 		void Detour(unsigned char* pOFunc, void* pHkFunc, unsigned char* originalData);
+		void DetourInit(unsigned char* pOFunc, void* pHkFunc, unsigned char* originalData);
 		void* DetourLength(BYTE* src, const BYTE* dst, const int len);
 		void* DetourClassLength(BYTE* src, const BYTE* dst, const int len);
 		void UnDetour(unsigned char* pOFunc, unsigned char* originalData);
@@ -122,6 +127,8 @@ namespace Utils
 
 	// Calculate the distance between the two vectors
 	float CalculateDistance(Vector v1, Vector v2);
+	
+	mstime timeInMS();
 
 	// Get Launch Args
 	bool FindLaunchArg(std::string argToFind);

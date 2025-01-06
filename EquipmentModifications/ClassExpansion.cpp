@@ -157,8 +157,8 @@ PBYTE gunHpTypeByIndexMemory = static_cast<PBYTE>(malloc(5));
 PBYTE shieldHpTypeByIndexMemory = static_cast<PBYTE>(malloc(5));
 PBYTE gunHpTypeCountMemory = static_cast<PBYTE>(malloc(5));
 PBYTE shieldHpTypeCountMemory = static_cast<PBYTE>(malloc(5));
-using GetHpTypeByIndexT = uint(*__fastcall)(Archetype::Equipment* equip, void* edx, uint index);
-using GetHpTypeCountT = uint(*__fastcall)(Archetype::Equipment* equip);
+using GetHpTypeByIndexT = unsigned int(__fastcall*)(Archetype::Equipment* equip, void* edx, uint index);
+using GetHpTypeCountT = unsigned int(__fastcall*)(Archetype::Equipment* equip);
 GetHpTypeCountT getGunHpTypeCount = reinterpret_cast<GetHpTypeCountT>(GetProcAddress(GetModuleHandleA("common.dll"), "?get_number_of_hp_types@Gun@Archetype@@QBEHXZ"));
 GetHpTypeCountT getShieldHpTypeCount = reinterpret_cast<GetHpTypeCountT>(GetProcAddress(GetModuleHandleA("common.dll"), "?get_number_of_hp_types@ShieldGenerator@Archetype@@QBEHXZ"));
 GetHpTypeByIndexT getGunHpTypeByIndex = reinterpret_cast<GetHpTypeByIndexT>(GetProcAddress(GetModuleHandleA("common.dll"), "?get_hp_type_by_index@Gun@Archetype@@QBE?AW4HpAttachmentType@@H@Z"));
@@ -815,10 +815,10 @@ void CommonPatches()
 	// Remove warning regarding connecting internal type to hardpoint.
 	*AddrWarning = 0x4e;
 
-	Utils::Memory::Detour(reinterpret_cast<PBYTE>(getGunHpTypeByIndex), GetHpTypeByIndexDetour, gunHpTypeByIndexMemory);
-	Utils::Memory::Detour(reinterpret_cast<PBYTE>(getGunHpTypeCount), GetHpTypeCountDetour, gunHpTypeCountMemory);
-	Utils::Memory::Detour(reinterpret_cast<PBYTE>(getShieldHpTypeCount), GetShieldHpTypeCountDetour, shieldHpTypeCountMemory);
-	Utils::Memory::Detour(reinterpret_cast<PBYTE>(getShieldHpTypeByIndex), GetShieldHpTypeByIndexDetour, shieldHpTypeByIndexMemory);
+	Utils::Memory::DetourInit(reinterpret_cast<PBYTE>(getGunHpTypeByIndex), GetHpTypeByIndexDetour, gunHpTypeByIndexMemory);
+	Utils::Memory::DetourInit(reinterpret_cast<PBYTE>(getGunHpTypeCount), GetHpTypeCountDetour, gunHpTypeCountMemory);
+	Utils::Memory::DetourInit(reinterpret_cast<PBYTE>(getShieldHpTypeCount), GetShieldHpTypeCountDetour, shieldHpTypeCountMemory);
+	Utils::Memory::DetourInit(reinterpret_cast<PBYTE>(getShieldHpTypeByIndex), GetShieldHpTypeByIndexDetour, shieldHpTypeByIndexMemory);
 
 	Utils::Memory::Patch((PBYTE)gunReadReplacementOffset, HpTypeGunRead);
 	Utils::Memory::Patch((PBYTE)shieldReadReplacementOffset, HpTypeShieldRead);
@@ -880,11 +880,11 @@ void FreelancerExePatches()
 		addrEquip4[5] = addrEquip5[5] = 0x90;
 
 	// Recognise the class of the new types.
-	addrLevel[2] = levelIndex.size();
+	addrLevel[2] = (BYTE)levelIndex.size();
 	*reinterpret_cast<DWORD*>((addrLevel + 12)) = reinterpret_cast<DWORD>(levelIndex.data());
 
 	// Recognise the equipment list of the new types.
-	addrEquip[2] = equipIndex.size();
+	addrEquip[2] = (BYTE)equipIndex.size();
 	*reinterpret_cast<DWORD*>((addrEquip + 8)) = reinterpret_cast<DWORD>(equipIndex.data());
 
 	constexpr auto HardpointCategoryReadAddress = 0x586Ca5;
@@ -902,10 +902,10 @@ void FreelancerExePatches()
 #endif
 
 	// adjust for the new mount names.
-	addrMntName1[2] = idsBindings.size();
-	addrMntName2[0x33] = mountList.size();
-	addrMntName2[0x43] = mountList.size();
-	addrMntName4[2] = mountDescriptionIndex.size();
+	addrMntName1[2] = (BYTE)idsBindings.size();
+	addrMntName2[0x33] = (BYTE)mountList.size();
+	addrMntName2[0x43] = (BYTE)mountList.size();
+	addrMntName4[2] = (BYTE)mountDescriptionIndex.size();
 	*reinterpret_cast<DWORD*>((addrMntName1 + 8)) = *reinterpret_cast<DWORD*>((addrMntName2 + 3)) = reinterpret_cast<DWORD>(idsBindings.data());
 	*addrMntName3 = reinterpret_cast<DWORD>(idsBindings.data()) + 4;
 	*reinterpret_cast<DWORD*>((addrMntName2 + 0x49)) = reinterpret_cast<DWORD>(mountList.data());

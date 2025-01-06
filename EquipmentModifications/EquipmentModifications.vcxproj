@@ -165,6 +165,8 @@ copy /Y "$(TargetDir)$(ProjectName).dll" "$(FL_PATH)/$(ProjectName).dll"</Comman
     <ClCompile Include="CustomClassNames.cpp" />
     <ClCompile Include="InfocardOverride.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MiscFixes.cpp" />
+    <ClCompile Include="MissileFixes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Utils.hpp" />

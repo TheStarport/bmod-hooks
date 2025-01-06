@@ -7,6 +7,23 @@ const st6_free_t st6_free = reinterpret_cast<st6_free_t>(GetProcAddress(GetModul
 
 namespace Utils
 {
+
+	// Calculate the distance between the two vectors
+	float Distance3D(const Vector& v1, const Vector& v2)
+	{
+		float sq1 = v1.x - v2.x, sq2 = v1.y - v2.y, sq3 = v1.z - v2.z;
+		return sqrtf(sq1 * sq1 + sq2 * sq2 + sq3 * sq3);
+	}
+
+	mstime timeInMS()
+	{
+		mstime iCount;
+		QueryPerformanceCounter((LARGE_INTEGER*)&iCount);
+		mstime iFreq;
+		QueryPerformanceFrequency((LARGE_INTEGER*)&iFreq);
+		return 1000 * iCount / iFreq;
+	}
+
 	std::vector<std::wstring> CommandLineParser::tokens;
 
 	bool FindLaunchArg(std::string argToFind)
@@ -363,6 +380,16 @@ namespace Utils
 
 		void Detour(unsigned char* pOFunc, void* pHkFunc, unsigned char* originalData)
 		{
+			BYTE bPatch[5]; // We need to change 5 bytes and I'm going to use memcpy so this is the simplest way.
+			bPatch[0] = 0xE9; // Set the first byte of the byte array to the op code for the JMP instruction.
+			DWORD dwRelativeAddress = (DWORD)pHkFunc - (DWORD)pOFunc - 5; // Calculate the relative JMP address.
+			memcpy(&bPatch[1], &dwRelativeAddress, 4); // Copy the relative address to the byte array.
+			memcpy(originalData, pOFunc, 5);
+			memcpy(pOFunc, bPatch, 5); // Change the first 5 bytes to the JMP instruction.
+		}
+
+		void DetourInit(unsigned char* pOFunc, void* pHkFunc, unsigned char* originalData)
+		{
 			DWORD dwOldProtection = 0; // Create a DWORD for VirtualProtect calls to allow us to write.
 			BYTE bPatch[5]; // We need to change 5 bytes and I'm going to use memcpy so this is the simplest way.
 			bPatch[0] = 0xE9; // Set the first byte of the byte array to the op code for the JMP instruction.
@@ -371,7 +398,6 @@ namespace Utils
 			memcpy(&bPatch[1], &dwRelativeAddress, 4); // Copy the relative address to the byte array.
 			memcpy(originalData, pOFunc, 5);
 			memcpy(pOFunc, bPatch, 5); // Change the first 5 bytes to the JMP instruction.
-			VirtualProtect((void*)pOFunc, 5, dwOldProtection, nullptr); // Set the protection back to what it was.
 		}
 
 		void* DetourLength(BYTE* src, const BYTE* dst, const int len)
@@ -429,10 +455,7 @@ namespace Utils
 
 		void UnDetour(unsigned char* pOFunc, unsigned char* originalData)
 		{
-			DWORD dwOldProtection = 0; // Create a DWORD for VirtualProtect calls to allow us to write.
-			VirtualProtect((void*)pOFunc, 5, PAGE_EXECUTE_READWRITE, &dwOldProtection); // Allow us to write to the memory we need to change
 			memcpy(pOFunc, originalData, 5);
-			VirtualProtect((void*)pOFunc, 5, dwOldProtection, nullptr); // Set the protection back to what it was.
 		}
 
 		void Patch(unsigned char* pOFunc, void* pHkFunc)
@@ -486,7 +509,7 @@ namespace Utils
 
 			typedef void* (*DacomAcquire)();
 			DacomAcquire address = DacomAcquire(0x65B31D0);
-			Detour((PBYTE)address, Bork, PBYTE(malloc(5)));
+			DetourInit((PBYTE)address, Bork, PBYTE(malloc(5)));
 		}
 	}
 

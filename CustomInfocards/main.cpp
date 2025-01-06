@@ -352,7 +352,7 @@ uint __stdcall StatsHook(int idx, LPBYTE equip, BYTE name, BYTE value)
 		return SetCounterMeasureDropperInfocard(reinterpret_cast<Archetype::CounterMeasureDropper*>(equip), flags);
 	case 12:
 		return SetMunitionInfocard(reinterpret_cast<Archetype::Munition*>(equip), flags);
-		break;
+	default:
 		return len;
 	}
 }

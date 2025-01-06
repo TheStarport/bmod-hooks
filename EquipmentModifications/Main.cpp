@@ -33,7 +33,6 @@ void FreelancerOnlyHacks()
 	}
 
 	SetupCustomClassName();
-	InitBurstMod();
 }
 
 void SetupHack()
@@ -42,12 +41,15 @@ void SetupHack()
 	HMODULE common = GetModuleHandleA("common");
 	globalTimingFunction = (GlobalTimeFunc)GetProcAddress(common, "?UpdateGlobalTime@Timing@@YAXN@Z");
 	data = (unsigned char*)malloc(5);
-	Utils::Memory::Detour((unsigned char*)globalTimingFunction, Update, data);
+	Utils::Memory::DetourInit((unsigned char*)globalTimingFunction, Update, data);
 
 	SetupClassExpansion();
 	InitInfocardEdits();
 	FreelancerOnlyHacks();
 
+	InitBurstMod();
+	InitMissileFixes();
+	InitMiscFixes();
 }
 
 BOOL WINAPI DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)

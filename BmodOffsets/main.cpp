@@ -383,7 +383,7 @@ void SetupHack()
 	if (EndsWith(filename, L"Freelancer.exe"))
 	{
 		FreelancerHacks();
-		Utils::Memory::Detour(PBYTE(createId), CreateIdDetour, createIdData);
+		Utils::Memory::DetourInit(PBYTE(createId), CreateIdDetour, createIdData);
 	}
 	CommonHacks();
 }
