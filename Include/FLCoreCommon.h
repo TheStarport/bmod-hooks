@@ -1251,7 +1251,8 @@ protected:
 	void set_pointer(struct Watchable const *);
 
 public:
-	unsigned char data[OBJECT_DATA_SIZE];
+	Watchable* watchable;
+	BaseWatcher* nextBaseWatcher;
 };
 
 namespace BehaviorTypes
@@ -6588,7 +6589,7 @@ struct IMPORT Watchable
 	unsigned int unwatch(void);
 
 public:
-	unsigned char data[OBJECT_DATA_SIZE];
+	BaseWatcher* newestBaseWatcher; // The last basewatcher set to watch this
 };
 
 class IMPORT XMLReader
