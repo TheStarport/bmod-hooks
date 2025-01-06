@@ -69,11 +69,6 @@ void InitBurstFireEquipment()
 		auto burstData = burstFireData.find(launcher->archetype->iArchID);
 		if (burstData == burstFireData.end())
 		{
-			BurstFireInfo& magData = playerMagClips[launcher->iSubObjId];
-			magData.magCapacity = 3;
-			magData.magStatus = 3;
-			magData.reloadDuration = -3;
-			magData.isReloading = false;
 			continue;
 		}
 
