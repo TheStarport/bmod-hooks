@@ -4010,6 +4010,7 @@ public:
 	struct EquipDesc const * traverse_equipment_type(unsigned int, struct EquipDesc const *)const;
 
 public:
+	uint allocator;
 	std::list<EquipDesc> equip;
 };
 

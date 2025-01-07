@@ -50,6 +50,7 @@ void SetupHack()
 	InitBurstMod();
 	InitMissileFixes();
 	InitMiscFixes();
+	InitAmmoLimit();
 }
 
 BOOL WINAPI DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved)

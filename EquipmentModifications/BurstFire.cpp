@@ -383,7 +383,10 @@ void InitBurstMod()
 
 	for (auto& file : files)
 	{
-		ini.open(file.c_str(), false);
+		if (!ini.open(file.c_str(), false))
+		{
+			continue;
+		}
 		while (ini.read_header())
 		{
 			uint nickname = 0;
@@ -460,6 +463,48 @@ void InitBurstMod()
 				}
 
 				customMissileArchList[nickname] = arch;
+			}
+			else if (ini.is_header("Mine"))
+			{
+				while (ini.read_value())
+				{
+					if (ini.is_value("nickname"))
+					{
+						nickname = CreateID(ini.get_value_string(0));
+					}
+					else if (ini.is_value("ammo_limit"))
+					{
+						ammoMap[nickname] = { ini.get_value_int(0), std::max(1, ini.get_value_int(1)) };
+					}
+				}
+			}
+			else if (ini.is_header("CounterMeasure"))
+			{
+				while (ini.read_value())
+				{
+					if (ini.is_value("nickname"))
+					{
+						nickname = CreateID(ini.get_value_string(0));
+					}
+					else if (ini.is_value("ammo_limit"))
+					{
+						ammoMap[nickname] = { ini.get_value_int(0), std::max(1, ini.get_value_int(1)) };
+					}
+				}
+			}
+			else if (ini.is_header("Munition"))
+			{
+				while (ini.read_value())
+				{
+					if (ini.is_value("nickname"))
+					{
+						nickname = CreateID(ini.get_value_string(0));
+					}
+					else if (ini.is_value("ammo_limit"))
+					{
+						ammoMap[nickname] = { ini.get_value_int(0), std::max(1, ini.get_value_int(1)) };
+					}
+				}
 			}
 		}
 
