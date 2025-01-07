@@ -95,8 +95,12 @@ PBYTE unkData;
 // Map of launcher to pair of unk class pointer and ship owner id
 std::unordered_map<CELauncher*, std::pair<void*, uint>> weirdFreelancerClassMap;
 
+typedef void(__thiscall* PlayerFireSuccess)(CELauncher* launcher);
 void __fastcall PlayerConsumeFireResourcesDetour(CELauncher* launcher)
 {
+	static PlayerFireSuccess playerConsumeFireResources = (PlayerFireSuccess)(DWORD(GetModuleHandleA("common")) + 0x395F0);
+	playerConsumeFireResources(launcher);
+
 	if (Utils::GetClientId() != launcher->owner->ownerPlayer)
 	{
 		return;
