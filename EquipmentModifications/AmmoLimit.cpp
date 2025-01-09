@@ -23,6 +23,51 @@ int GetLauncherCount(uint ammoId)
     return std::max(1, launcherCount);
 }
 
+UINT __stdcall Set_Ammo_Limit(INI_Reader& ini, UINT* ammo)
+{
+    if (ini.is_value("ammo_limit") && ammo[2])  // nickname must be first
+    {
+        ammoStruct ammoInfo;
+        LPCSTR limit = ini.get_value_string(0);
+        if (*limit == '*')
+            ammoInfo.maxAmmo = MAX_PLAYER_AMMO * static_cast<int>(atof(limit + 1));
+        else if (*limit == '/')
+            ammoInfo.maxAmmo = MAX_PLAYER_AMMO / static_cast<int>(atof(limit + 1));
+        else
+            ammoInfo.maxAmmo = atoi(limit);
+        ammoInfo.launcherMaxStack = std::max(1, ini.get_value_int(1));
+        ammoMap[ammo[2]] = ammoInfo;
+        return 0x62f6f2c;
+    }
+    else if (ini.is_value("self_detonate") && ammo[2])
+    {
+        if (ini.get_value_bool(0))
+        {
+            self_detonating_mines.insert(ammo[2]);
+        }
+        return 0x62f6f2c;
+    }
+    else if (ini.is_value("arming_time") && ammo[2])
+    {
+        missile_arming_time[ammo[2]] = ini.get_value_float(0);
+        return 0x62f6f2c;
+    }
+    else if (ini.is_value("mine_arming_time") && ammo[2])
+    {
+        mine_arming_time[ammo[2]] = ini.get_value_float(0);
+        return 0x62f6f2c;
+    }
+    return 0x62f6f36;
+}
+
+__declspec(naked) void Ammolimit_Init(void)
+{
+    __asm push	edi
+    __asm push	esi
+    __asm call	Set_Ammo_Limit
+    __asm jmp	eax
+}
+
 void __stdcall Get_Ammo_Limit(UINT ammo)
 {
     auto iter = ammoMap.find(ammo);
@@ -85,12 +130,16 @@ DWORD protectXDummy;
 
 void InitAmmoLimit()
 {
+#define ADDR_INI    ((PDWORD)(0x62f6e97+2))
 #define ADDR_LIMIT1 ((PBYTE)0x47ee02) 	// checks "free" ammo
 #define ADDR_LIMIT2 ((PBYTE)0x47f1e1) 	// equipment cost
 #define ADDR_LIMIT3 ((PBYTE)0x483a72) 	// buy amount
 #define ADDR_LIMIT4 ((PBYTE)0x62b3224)	// jettison/tractor
 
+    ProtectX(ADDR_INI, 4);
     ProtectX(ADDR_LIMIT4, 6);
+
+    RELOFS(ADDR_INI, Ammolimit_Init);
 
     ADDR_LIMIT4[0] = 0x90;
     ADDR_LIMIT4[1] = 0xe8;
