@@ -75,7 +75,7 @@ void InitBurstFireEquipment()
 		BurstFireInfo& magData = playerMagClips[launcher->iSubObjId];
 		magData.magCapacity = burstData->second.magCapacity;
 		magData.magStatus = burstData->second.magCapacity;
-		magData.reloadDuration = launcher->LauncherArch()->fRefireDelay - burstData->second.reloadTime;
+		magData.reloadDuration = burstData->second.reloadTime;
 		magData.isReloading = false;
 	}
 }
@@ -357,17 +357,7 @@ void* __fastcall UnkDetour(void* ptr, void* edx, CELauncher* launcher, void* unk
 	return a;
 }
 
-typedef void(__fastcall* PlayerLaunchType)(void* unk);
-void __fastcall PlayerLaunchDetour(void* unk, void* edx)
-{
-	const static PlayerLaunchType playerLaunchFunc = PlayerLaunchType(DWORD(GetModuleHandleA(nullptr)) + 0x14B520);
-
-	playerLaunchFunc(unk);
-
-	InitBurstFireEquipment();
-}
-
-void InitBurstMod()
+void BurstModIniRead()
 {
 	// Vector to store our ini files
 	std::vector<std::string> files;
@@ -404,7 +394,7 @@ void InitBurstMod()
 					}
 					else if (ini.is_value("burst_fire"))
 					{
-						float baseRefire = ((Archetype::MineDropper*)Archetype::GetEquipment(nickname))->fRefireDelay;
+						float baseRefire = ((Archetype::CounterMeasureDropper*)Archetype::GetEquipment(nickname))->fRefireDelay;
 						burstFireData[nickname] = { ini.get_value_int(0), baseRefire - ini.get_value_float(1) };
 					}
 				}
@@ -446,7 +436,8 @@ void InitBurstMod()
 					}
 					else if (ini.is_value("burst_fire"))
 					{
-						burstFireData[nickname] = { ini.get_value_int(0), ini.get_value_float(1) };
+						float baseRefire = ((Archetype::Gun*)Archetype::GetEquipment(nickname))->fRefireDelay;
+						burstFireData[nickname] = { ini.get_value_int(0), baseRefire - ini.get_value_float(1) };
 					}
 				}
 
@@ -468,52 +459,31 @@ void InitBurstMod()
 
 				customMissileArchList[nickname] = arch;
 			}
-			else if (ini.is_header("Mine"))
-			{
-				while (ini.read_value())
-				{
-					if (ini.is_value("nickname"))
-					{
-						nickname = CreateID(ini.get_value_string(0));
-					}
-					else if (ini.is_value("ammo_limit"))
-					{
-						ammoMap[nickname] = { ini.get_value_int(0), std::max(1, ini.get_value_int(1)) };
-					}
-				}
-			}
-			else if (ini.is_header("CounterMeasure"))
-			{
-				while (ini.read_value())
-				{
-					if (ini.is_value("nickname"))
-					{
-						nickname = CreateID(ini.get_value_string(0));
-					}
-					else if (ini.is_value("ammo_limit"))
-					{
-						ammoMap[nickname] = { ini.get_value_int(0), std::max(1, ini.get_value_int(1)) };
-					}
-				}
-			}
-			else if (ini.is_header("Munition"))
-			{
-				while (ini.read_value())
-				{
-					if (ini.is_value("nickname"))
-					{
-						nickname = CreateID(ini.get_value_string(0));
-					}
-					else if (ini.is_value("ammo_limit"))
-					{
-						ammoMap[nickname] = { ini.get_value_int(0), std::max(1, ini.get_value_int(1)) };
-					}
-				}
-			}
 		}
 
 		ini.close();
 	}
+}
+
+typedef void(__fastcall* PlayerLaunchType)(void* unk);
+void __fastcall PlayerLaunchDetour(void* unk, void* edx)
+{
+	const static PlayerLaunchType playerLaunchFunc = PlayerLaunchType(DWORD(GetModuleHandleA(nullptr)) + 0x14B520);
+
+	static bool firstRun = true;
+	if (firstRun)
+	{
+		firstRun = false;
+		BurstModIniRead();
+	}
+
+	playerLaunchFunc(unk);
+
+	InitBurstFireEquipment();
+}
+
+void InitBurstMod()
+{
 
 	ceGunFireData = PBYTE(malloc(5));
 	ceGunFirePtr = CEFireType(GetProcAddress(GetModuleHandleA("common.dll"), "?Fire@CEGun@@UAE?AW4FireResult@@ABVVector@@@Z"));

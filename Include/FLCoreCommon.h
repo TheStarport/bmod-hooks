@@ -13,6 +13,9 @@
 #ifndef _FLCORECOMMON_H_
 #define _FLCORECOMMON_H_
 
+#define ST6_ALLOCATION_DEFINED
+#include "st6.h"
+
 #include "FLCoreDefs.h"
 #ifdef GetCurrentTime
 #undef GetCurrentTime
@@ -4010,8 +4013,7 @@ public:
 	struct EquipDesc const * traverse_equipment_type(unsigned int, struct EquipDesc const *)const;
 
 public:
-	uint allocator;
-	std::list<EquipDesc> equip;
+	st6::list<EquipDesc> equip;
 };
 
 struct IMPORT EquipDescVector
