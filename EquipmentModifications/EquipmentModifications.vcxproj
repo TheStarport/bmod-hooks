@@ -125,7 +125,8 @@
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(TargetDir)$(ProjectName).dll" "$(FL_REPO_PATH)/$(ProjectName).dll"
-copy /Y "$(TargetDir)$(ProjectName).dll" "$(FL_PATH)/$(ProjectName).dll"</Command>
+copy /Y "$(TargetDir)$(ProjectName).dll" "$(FL_PATH)/$(ProjectName).dll"
+copy /Y "$(TargetDir)$(ProjectName).dll" "$(BMOD_COPY_PATH)/$(ProjectName).dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -168,6 +169,7 @@ copy /Y "$(TargetDir)$(ProjectName).dll" "$(FL_PATH)/$(ProjectName).dll"</Comman
     <ClCompile Include="MiscFixes.cpp" />
     <ClCompile Include="MissileFixes.cpp" />
     <ClCompile Include="AmmoLimit.cpp" />
+    <ClCompile Include="ReticleUpdate.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Utils.hpp" />
