@@ -1,13 +1,13 @@
 #include "Main.hpp"
 
-std::unordered_map<uint, ammoStruct> ammoMap;
+std::unordered_map<uint, int> ammoLauncherMap;
 int max_ammo;
 
-int GetLauncherCount(uint ammoId)
+int GetAmmoCount(uint ammoId)
 {
     static EquipDescList* playerEquipDesc = (EquipDescList*)((char*)GetModuleHandleA(nullptr) + 0x272960);
 
-    int launcherCount = 0;
+    int ammoCount = 0;
     for (auto eq = playerEquipDesc->equip.begin(); eq != playerEquipDesc->equip.end(); eq++)
     {
         if (!eq->bMounted || eq->is_internal())
@@ -15,31 +15,46 @@ int GetLauncherCount(uint ammoId)
             continue;
         }
         Archetype::Launcher* launchArch = dynamic_cast<Archetype::Launcher*>(Archetype::GetEquipment(eq->iArchID));
-        if (launchArch && launchArch->iProjectileArchID == ammoId)
+        if (!launchArch || launchArch->iProjectileArchID != ammoId)
         {
-            launcherCount++;
+            continue;
+        }
+
+        auto ammoIter = ammoLauncherMap.find(eq->iArchID);
+        if (ammoIter != ammoLauncherMap.end())
+        {
+            ammoCount += ammoIter->second;
         }
     }
-    return std::max(1, launcherCount);
+    return ammoCount;
 }
 
-UINT __stdcall Set_Ammo_Limit(INI_Reader& ini, UINT* ammo)
+bool __fastcall ReadMunitionProjArchetype(INI_Reader* ini, Archetype::Launcher* launcher, char* searchedValue)
 {
-    if (ini.is_value("ammo_limit") && ammo[2])  // nickname must be first
+    if (ini->is_value(searchedValue))
     {
-        ammoStruct ammoInfo;
-        LPCSTR limit = ini.get_value_string(0);
-        if (*limit == '*')
-            ammoInfo.maxAmmo = MAX_PLAYER_AMMO * static_cast<int>(atof(limit + 1));
-        else if (*limit == '/')
-            ammoInfo.maxAmmo = MAX_PLAYER_AMMO / static_cast<int>(atof(limit + 1));
-        else
-            ammoInfo.maxAmmo = atoi(limit);
-        ammoInfo.launcherMaxStack = std::max(1, ini.get_value_int(1));
-        ammoMap[ammo[2]] = ammoInfo;
-        return 0x62f6f2c;
+        return true;
     }
-    else if (ini.is_value("self_detonate") && ammo[2])
+
+    if (ini->is_value("ammo_limit"))
+    {
+        ammoLauncherMap[launcher->iArchID] = ini->get_value_int(0);
+    }
+
+    return false;
+}
+
+__declspec(naked) void ReadMunitionProjArchetypeNaked()
+{
+    __asm {
+        mov edx, [esp+0xC]
+        jmp ReadMunitionProjArchetype
+    }
+}
+
+UINT __stdcall ReadMunition(INI_Reader& ini, UINT* ammo)
+{
+    if (ini.is_value("self_detonate") && ammo[2])
     {
         if (ini.get_value_bool(0))
         {
@@ -64,21 +79,13 @@ __declspec(naked) void Ammolimit_Init(void)
 {
     __asm push	edi
     __asm push	esi
-    __asm call	Set_Ammo_Limit
+    __asm call	ReadMunition
     __asm jmp	eax
 }
 
 void __stdcall Get_Ammo_Limit(UINT ammo)
 {
-    auto iter = ammoMap.find(ammo);
-    if (iter == ammoMap.end())
-    {
-        max_ammo = MAX_PLAYER_AMMO;
-        return;
-    }
-    int launcherCount = GetLauncherCount(iter->first);
-    int maxLauncherStackAllowed = std::min(iter->second.launcherMaxStack, launcherCount);
-    max_ammo = iter->second.maxAmmo * maxLauncherStackAllowed;
+    max_ammo = GetAmmoCount(ammo);
 }
 
 __declspec(naked) void Ammolimit1_Hook()
@@ -95,7 +102,7 @@ __declspec(naked) void Ammolimit2_Hook()
 {
     __asm pushf
     __asm push	dword ptr[ebx + 0xb8]
-        __asm call	Get_Ammo_Limit
+    __asm call	Get_Ammo_Limit
     __asm mov	edx, offset max_ammo
     __asm popf
     __asm ret
@@ -105,7 +112,7 @@ __declspec(naked) void Ammolimit3_Hook()
 {
     __asm push	eax
     __asm push	dword ptr[esp + 0x1c + 8]
-        __asm call	Get_Ammo_Limit
+    __asm call	Get_Ammo_Limit
     __asm mov	ecx, offset max_ammo
     __asm pop	eax
     __asm ret
@@ -115,7 +122,7 @@ __declspec(naked) void Ammolimit4_Hook()
 {
     __asm push	ecx
     __asm push	dword ptr[esp + 0x1c + 4]
-        __asm call	Get_Ammo_Limit
+    __asm call	Get_Ammo_Limit
     __asm mov	ebx, max_ammo
     __asm pop	ecx
     __asm ret
@@ -155,5 +162,6 @@ void InitAmmoLimit()
         RELOFS(ADDR_LIMIT1 + 2, Ammolimit1_Hook);
         RELOFS(ADDR_LIMIT2 + 2, Ammolimit2_Hook);
         RELOFS(ADDR_LIMIT3 + 2, Ammolimit3_Hook);
+        Utils::Memory::PatchCallAddr((char*)GetModuleHandleA("common"), 0x9619D, (char*)ReadMunitionProjArchetypeNaked);
     }
 }

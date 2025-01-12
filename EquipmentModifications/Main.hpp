@@ -18,11 +18,4 @@ extern std::unordered_map<uint, float> top_speed_map;
 extern std::unordered_map<uint, float> mine_arming_time;
 extern std::unordered_map<uint, uint> gun_barrel_counts;
 
-
-struct ammoStruct
-{
-	int maxAmmo;
-	int launcherMaxStack;
-};
-
-extern std::unordered_map<uint, ammoStruct> ammoMap;
+extern std::unordered_map<uint, int> ammoLauncherMap;
