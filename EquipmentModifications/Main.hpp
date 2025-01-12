@@ -11,6 +11,7 @@ void InitInfocardEdits();
 void InitMiscFixes();
 void InitMissileFixes();
 void InitAmmoLimit();
+void InitReticle();
 
 extern std::unordered_set<uint> self_detonating_mines;
 extern std::unordered_map<uint, float> missile_arming_time;
