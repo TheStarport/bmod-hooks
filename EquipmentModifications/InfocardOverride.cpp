@@ -337,8 +337,8 @@ bool __stdcall HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 			ss << L"<JUST loc=\"c\"/><TRA bold=\"true\"/><TEXT>Stats</TEXT><TRA bold=\"false\"/><PARA/><JUST loc=\"l\"/><PARA/>"
 				<< L"<TEXT>Mass: " << std::setprecision(0) << curShip->fMass << L"t</TEXT><PARA/>"
 				<< L"<TEXT>Armor: " << curShip->fHitPoints << L"</TEXT><PARA/>"
-				<< L"<TEXT>Cargo Space: " << curShip->fHoldSize << L"mï¿½</TEXT><PARA/>"
-				<< L"<TEXT>Turn Rate: " << std::setprecision(1) << turnRate.x << L"ï¿½/s</TEXT><PARA/>";
+				<< L"<TEXT>Cargo Space: " << curShip->fHoldSize << L"m³</TEXT><PARA/>"
+				<< L"<TEXT>Turn Rate: " << std::setprecision(1) << turnRate.x << L"°/s</TEXT><PARA/>";
 			if (!equipment.empty())
 			{
 				ss << L"<TEXT>Hardpoints: </TEXT><TRA data=\"0xE7C68490\" mask=\"-1\"/><TEXT>" << equipment << L"</TEXT><PARA/>";
@@ -348,8 +348,8 @@ bool __stdcall HandleShipInfocard(uint ids, RenderDisplayList& rdl)
 		{
 			ss << L"<PARA/><TEXT>" << static_cast<int>(curShip->fMass) << L"t</TEXT><PARA/>"
 				<< L"<TEXT>" << static_cast<int>(curShip->fHitPoints) << L"</TEXT><PARA/>"
-				<< L"<TEXT>" << static_cast<int>(curShip->fHoldSize) << L"mï¿½</TEXT><PARA/>"
-				<< L"<TEXT>" << std::setprecision(1) << turnRate.x << L"ï¿½/s</TEXT><PARA/>"
+				<< L"<TEXT>" << static_cast<int>(curShip->fHoldSize) << L"m³</TEXT><PARA/>"
+				<< L"<TEXT>" << std::setprecision(1) << turnRate.x << L"°/s</TEXT><PARA/>"
 				<< L"<TRA data=\"0xE7C68490\" mask=\"-1\"/><TEXT>" << equipment << L"</TEXT><PARA/>";
 		}
 
