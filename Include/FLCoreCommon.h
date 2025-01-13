@@ -1418,7 +1418,13 @@ protected:
 	static int const  MAX_GROUP_DEPTH;
 
 public:
-	unsigned char data[OBJECT_DATA_SIZE];
+	uint dunno0;  // 0
+	bool dunno4;  // 4
+	uint dunno8;  // 8
+	uint dunno12; // 12
+	uint dunno16; // 16
+	char size;    // 20
+	bool dunno21; // 21
 };
 
 class IMPORT CArchGrpTraverser
@@ -2987,7 +2993,14 @@ private:
 	static void  Clear(class std::list<class CEquip *, class std::allocator<class CEquip *> > &);
 
 public:
-	unsigned char data[180];
+	/* 0 */ CEqObj* parent;
+	/* 1 */ bool bDunno4;
+	/* 2 */ uint unkPtr1;
+	/* 3 */ int size1;
+	/* 4 */ bool bDunno10;
+	/* 5 */ uint unkPtr2;
+	/* 6 */ int size2;
+	/* 7 */ uint decayingCargo;
 };
 
 class IMPORT CEquipTraverser

@@ -141,7 +141,7 @@ char __fastcall PlayerFireDetour(CliGun* launcher, void* edx, Vector& firePositi
 	{
 		CShip* cship = Utils::GetCShip();
 		IObjInspectImpl* target = reinterpret_cast<IObjInspectImpl*>(cship->get_target());
-		if (target && target->cobject()->objectClass == CObject::CSHIP_OBJECT)
+		if (target)
 		{
 			Vector& playerPos = cship->vPosition;
 
