@@ -201,6 +201,35 @@ __declspec(naked) void ReticleRangeHitRay()
 	}
 }
 
+bool __fastcall GetMaxGunRangeDetour(CShip* ship, void* edx, float& range)
+{
+	bool retVal = ship->get_farthest_active_gun_range(range);
+
+	static Camera** currentCameraPointer = (Camera**)0x00679738;
+	static Camera* chaseCameraPointer = (Camera*)0x00678d48;
+	static Camera* turretCameraPointer = (Camera*)0x00678f60;
+	if (*currentCameraPointer == chaseCameraPointer
+		|| *currentCameraPointer == turretCameraPointer)
+	{
+		IObjRW* target = ship->get_target();
+		if (target)
+		{
+			Vector leadPos;
+			if (ship->get_tgt_lead_fire_pos((const IObjInspect*)target, leadPos))
+			{
+				range = Utils::Distance3D(leadPos, (*currentCameraPointer)->vPos);
+			}
+		}
+		else
+		{
+			float cameraToShipDistance = Utils::Distance3D(ship->vPosition, (*currentCameraPointer)->vPos);
+			range += cameraToShipDistance;
+		}
+	}
+
+	return retVal;
+}
+
 void InitReticle()
 {
 	auto hFreelancer = GetModuleHandleA(nullptr);
@@ -216,4 +245,7 @@ void InitReticle()
 	static BYTE snapPatchedMemory[] = { 0x90, 0xE9 };
 	static char* snapPatchAddr = (char*)hFreelancer + 0xF2493;
 	Utils::Memory::WriteProcMem(snapPatchAddr, snapPatchedMemory, sizeof(snapPatchedMemory));
+
+	uint maxRangeAddr = (uint)&GetMaxGunRangeDetour;
+	Utils::Memory::WriteProcMem(0x5C65BC, &maxRangeAddr, 4);
 }
